@@ -1,347 +1,709 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VR Hand Tracking - Apps Reais & Câmera</title>
-    <!-- MediaPipe Hands e utilitários -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-    
-    <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background: #000;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            user-select: none;
-        }
-        video {
-            display: none;
-        }
-        canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            transform: scaleX(-1); /* Espelhamento */
-            z-index: 1;
-        }
-        /* Barra de Menu Estilo VR */
-        .vr-dock {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 10;
-            display: flex;
-            gap: 20px;
-            pointer-events: none;
-        }
-        .app-btn {
-            background: rgba(20, 20, 30, 0.6);
-            backdrop-filter: blur(16px);
-            border: 2px solid rgba(255, 255, 255, 0.25);
-            color: white;
-            padding: 16px 28px;
-            border-radius: 20px;
-            font-size: 16px;
-            font-weight: bold;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            transition: transform 0.2s, background 0.2s, border-color 0.2s, box-shadow 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .app-btn.active {
-            background: rgba(0, 255, 128, 0.35);
-            border-color: #00ff80;
-            transform: scale(1.15) translateY(-5px);
-            box-shadow: 0 0 25px #00ff80;
-        }
-        /* Controles Superiores */
-        .top-controls {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 10;
-            display: flex;
-            gap: 15px;
-        }
-        .control-btn {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            padding: 10px 18px;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 14px;
-            transition: background 0.2s;
-        }
-        .control-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-        /* Janelas Flutuantes (Apps VR) */
-        .vr-window {
-            position: absolute;
-            top: 15%;
-            left: 50%;
-            transform: translateX(-50%) scale(0.9);
-            width: 75vw;
-            max-width: 800px;
-            height: 55vh;
-            background: rgba(15, 15, 25, 0.85);
-            backdrop-filter: blur(20px);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-radius: 24px;
-            z-index: 5;
-            display: none;
-            flex-direction: column;
-            overflow: hidden;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.7);
-            opacity: 0;
-            transition: all 0.3s ease;
-        }
-        .vr-window.open {
-            display: flex;
-            opacity: 1;
-            transform: translateX(-50%) scale(1);
-        }
-        .window-header {
-            background: rgba(255, 255, 255, 0.08);
-            padding: 12px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: #fff;
-            font-weight: bold;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        .close-btn {
-            background: #ff4757;
-            border: none;
-            color: white;
-            padding: 6px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        .window-content {
-            flex: 1;
-            width: 100%;
-            height: 100%;
-            border: none;
-            background: #000;
-        }
-        #status {
-            position: absolute;
-            bottom: 110px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #fff;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(6px);
-            padding: 8px 18px;
-            border-radius: 8px;
-            font-size: 14px;
-            z-index: 10;
-            border: 1px solid rgba(255,255,255,0.15);
-            pointer-events: none;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VR OS - Sistema Operacional de Mãos</title>
+  
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- MediaPipe Hands -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  
+  <!-- YouTube IFrame API -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+    }
+
+    body {
+      background-color: #050508;
+      color: #fff;
+      overflow: hidden;
+      user-select: none;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* === WEBCAM & CANVAS VR OVERLAY (FICA POR CIMA DE TUDO) === */
+    video#webcam {
+      display: none;
+    }
+
+    canvas#output_canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      transform: scaleX(-1); /* Espelhamento */
+      z-index: 10000; /* Garante que a mão fique sempre na frente */
+      pointer-events: none;
+    }
+
+    /* BARRA DE STATUS VR */
+    #vrStatus {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(10, 10, 20, 0.85);
+      border: 1px solid #00ffcc;
+      color: #00ffcc;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: bold;
+      z-index: 9999;
+      box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
+      backdrop-filter: blur(10px);
+    }
+
+    /* === TELA DE INÍCIO (DASHBOARD VR) === */
+    #homeScreen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: radial-gradient(circle at center, #1a1a2e 0%, #050508 100%);
+      z-index: 10;
+      transition: opacity 0.5s ease;
+    }
+
+    .home-header {
+      text-align: center;
+      margin-bottom: 50px;
+    }
+
+    .home-header h1 {
+      font-size: 3rem;
+      background: linear-gradient(45deg, #00ffcc, #ff0055);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+    }
+
+    .home-header p {
+      color: #aaa;
+      font-size: 1.2rem;
+    }
+
+    /* GRID DE APPS NA TELA DE INÍCIO */
+    .app-grid {
+      display: flex;
+      gap: 30px;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      max-width: 900px;
+    }
+
+    .app-card {
+      width: 160px;
+      height: 160px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      border-radius: 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 15px;
+      cursor: pointer;
+      backdrop-filter: blur(15px);
+      box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .app-card i {
+      font-size: 50px;
+    }
+
+    .app-card span {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .app-card:hover, .app-card.vr-hover {
+      transform: translateY(-10px) scale(1.1);
+      border-color: #00ffcc;
+      box-shadow: 0 0 30px rgba(0, 255, 204, 0.5);
+      background: rgba(0, 255, 204, 0.15);
+    }
+
+    .app-card.youtube i { color: #ff0000; }
+    .app-card.browser i { color: #1e90ff; }
+    .app-card.settings i { color: #ffa500; }
+
+    /* === INTERFACE DO YOUTUBE (APLICATIVO) === */
+    #appYouTube {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: #0f0f0f;
+      display: none; /* Inicia Oculto */
+      z-index: 20;
+      overflow-y: auto;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 24px;
+      height: 60px;
+      position: fixed;
+      top: 0;
+      width: 100%;
+      background-color: #0f0f0f;
+      z-index: 100;
+      border-bottom: 1px solid #222;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .btn-home-icon {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: bold;
+    }
+
+    .btn-home-icon:hover {
+      background: #00ffcc;
+      color: #000;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #fff;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 20px;
+    }
+
+    .logo i { color: #ff0000; font-size: 26px; }
+
+    .search-container {
+      display: flex;
+      align-items: center;
+      flex: 0 1 600px;
+    }
+
+    .search-box {
+      width: 100%;
+      border: 1px solid #303030;
+      border-radius: 40px 0 0 40px;
+      background-color: #121212;
+      padding: 10px 20px;
+      color: #fff;
+      font-size: 15px;
+      outline: none;
+    }
+
+    .search-btn {
+      background-color: #222;
+      border: 1px solid #303030;
+      border-left: none;
+      border-radius: 0 40px 40px 0;
+      padding: 10px 24px;
+      cursor: pointer;
+      color: #fff;
+    }
+
+    .container {
+      display: flex;
+      margin-top: 60px;
+      height: calc(100vh - 60px);
+    }
+
+    aside {
+      width: 240px;
+      background-color: #0f0f0f;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      color: #fff;
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    .nav-item:hover, .nav-item.active { background-color: #272727; }
+
+    main {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    .video-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 24px 18px;
+    }
+
+    .video-card {
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: transform 0.2s;
+    }
+
+    .video-card:hover { transform: scale(1.03); }
+
+    .thumbnail-container {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border-radius: 14px;
+      overflow: hidden;
+      background-color: #272727;
+    }
+
+    .thumbnail-container img { width: 100%; height: 100%; object-fit: cover; }
+
+    .duration {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      background-color: rgba(0, 0, 0, 0.8);
+      font-size: 12px;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .video-info { display: flex; gap: 12px; }
+
+    .channel-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background-color: #555;
+      flex-shrink: 0;
+    }
+
+    .video-details h3 { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+    .video-details p { font-size: 12px; color: #aaa; }
+
+    /* === MODAL FULLSCREEN DO PLAYER YOUTUBE === */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: #000;
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content { width: 100%; height: 100%; }
+    #player { width: 100%; height: 100%; border: none; }
+
+    .close-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      font-size: 24px;
+      color: #fff;
+      background-color: rgba(0, 0, 0, 0.7);
+      border: 1px solid #fff;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      z-index: 1001;
+    }
+
+    .close-btn:hover { background-color: #ff0000; }
+
+    .vr-player-controls {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 20px;
+      z-index: 1002;
+    }
+
+    .vr-btn {
+      background: rgba(20, 20, 30, 0.85);
+      border: 2px solid #00ffcc;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+    }
+
+    .vr-btn:hover { background: #00ffcc; color: #000; }
+  </style>
 </head>
 <body>
 
-    <video id="webcam" autoplay playsinline muted></video>
-    <canvas id="output_canvas"></canvas>
+  <!-- ELEMENTOS DE RASTREAMENTO VR -->
+  <video id="webcam" autoplay playsinline muted></video>
+  <canvas id="output_canvas"></canvas>
+  <div id="vrStatus">🖐️ Iniciando sistema VR...</div>
 
-    <!-- Controles de Câmera -->
-    <div class="top-controls">
-        <button class="control-btn" id="switchCamBtn">🔄 Trocar Câmera</button>
+  <!-- 1. TELA DE INÍCIO (DASHBOARD) -->
+  <div id="homeScreen">
+    <div class="home-header">
+      <h1>VR Horizon OS</h1>
+      <p>Aproxime o dedo indicador ou faça o gesto de pinça 👆 para abrir</p>
     </div>
 
-    <div id="status">Iniciando sistema de rastreamento...</div>
+    <div class="app-grid">
+      <div class="app-card youtube" onclick="abrirAplicativo('YouTube')">
+        <i class="fa-brands fa-youtube"></i>
+        <span>YouTube</span>
+      </div>
+      <div class="app-card browser" onclick="alert('Navegador VR em breve!')">
+        <i class="fa-solid fa-globe"></i>
+        <span>Navegador</span>
+      </div>
+      <div class="app-card settings" onclick="alert('Configurações do VR')">
+        <i class="fa-solid fa-gear"></i>
+        <span>Ajustes</span>
+      </div>
+    </div>
+  </div>
 
-    <!-- Janelas de Apps Virtuais (VR) -->
-    <div id="windowYouTube" class="vr-window">
-        <div class="window-header">
-            <span>📺 YouTube VR</span>
-            <button class="close-btn" onclick="closeApp('YouTube')">X Fechar</button>
-        </div>
-        <!-- Incorporando o YouTube de forma interativa -->
-        <iframe class="window-content" src="https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+  <!-- 2. APLICATIVO YOUTUBE -->
+  <div id="appYouTube">
+    <header>
+      <div class="logo-container">
+        <button class="btn-home-icon" onclick="voltarParaHome()">
+          <i class="fa-solid fa-house"></i> Início
+        </button>
+        <a href="#" class="logo">
+          <i class="fa-brands fa-youtube"></i> YouTube VR
+        </a>
+      </div>
+
+      <div class="search-container">
+        <input type="text" class="search-box" id="searchInput" placeholder="Pesquisar vídeos...">
+        <button class="search-btn" onclick="buscarVideo()">
+          <i class="fa-solid fa-magnifying-glass"></i>
+        </button>
+      </div>
+
+      <div style="display:flex; gap: 20px;">
+        <i class="fa-solid fa-video"></i>
+        <i class="fa-solid fa-bell"></i>
+        <i class="fa-solid fa-circle-user"></i>
+      </div>
+    </header>
+
+    <div class="container">
+      <aside>
+        <a href="#" class="nav-item active"><i class="fa-solid fa-house"></i> Início</a>
+        <a href="#" class="nav-item"><i class="fa-solid fa-bolt"></i> Shorts</a>
+        <a href="#" class="nav-item"><i class="fa-solid fa-folder"></i> Inscrições</a>
+      </aside>
+
+      <main>
+        <div class="video-grid" id="videoGrid"></div>
+      </main>
+    </div>
+  </div>
+
+  <!-- 3. MODAL PLAYER YOUTUBE FULLSCREEN -->
+  <div class="modal" id="videoModal">
+    <button class="close-btn" onclick="fecharPlayer()">&times;</button>
+    <div class="modal-content">
+      <div id="player"></div>
     </div>
 
-    <div id="windowBrowser" class="vr-window">
-        <div class="window-header">
-            <span>🌐 Navegador Web</span>
-            <button class="close-btn" onclick="closeApp('Browser')">X Fechar</button>
-        </div>
-        <iframe class="window-content" src="https://wikipedia.org"></iframe>
+    <div class="vr-player-controls">
+      <button class="vr-btn" onclick="alternarPlayPause()"><i class="fa-solid fa-pause" id="playIcon"></i> Pausar / Play</button>
+      <button class="vr-btn" onclick="fecharPlayer()"><i class="fa-solid fa-xmark"></i> Fechar Vídeo</button>
     </div>
+  </div>
 
-    <!-- Dock de Apps (Menu Inferior) -->
-    <div class="vr-dock">
-        <div id="appYouTube" class="app-btn">📺 YouTube</div>
-        <div id="appBrowser" class="app-btn">🌐 Navegador</div>
-    </div>
+  <script>
+    /* === LISTA DE VÍDEOS === */
+    const listaVideos = [
+      {
+        id: 'N6Rao_x2cJc',
+        title: 'A CARA DO CRIME 4 "Acendo a Flor"- Poze l MC Cabelinho l Bielzin l Oruam l MC Ryan SP',
+        channel: 'Mainstreet Records',
+        views: '103 mi',
+        time: 'há 3 anos',
+        duration: '5:13',
+        thumb: 'https://img.youtube.com/vi/N6Rao_x2cJc/hqdefault.jpg'
+      },
+      {
+        id: 'oYQwySDMl9w',
+        title: 'MC Ryan SP, Orochi, Oruam, MC Hariel - Perfeita (Video Clipe Oficial)',
+        channel: 'MC Ryan SP',
+        views: '57 mi',
+        time: 'há 3 anos',
+        duration: '5:04',
+        thumb: 'https://img.youtube.com/vi/oYQwySDMl9w/hqdefault.jpg'
+      }
+    ];
 
-    <script>
-        const videoElement = document.getElementById('webcam');
-        const canvasElement = document.getElementById('output_canvas');
-        const canvasCtx = canvasElement.getContext('2d');
-        const statusDiv = document.getElementById('status');
-        
-        const appYouTube = document.getElementById('appYouTube');
-        const appBrowser = document.getElementById('appBrowser');
-        
-        const windowYouTube = document.getElementById('windowYouTube');
-        const windowBrowser = document.getElementById('windowBrowser');
+    let player = null;
+    let isPlaying = false;
 
-        let currentFacingMode = 'user'; // 'user' = frontal, 'environment' = traseira
-        let activeApp = null;
-        let selectCooldown = false;
+    // ABRIR/FECHAR APLICATIVOS
+    function abrirAplicativo(nomeApp) {
+      if (nomeApp === 'YouTube') {
+        document.getElementById('homeScreen').style.display = 'none';
+        document.getElementById('appYouTube').style.display = 'block';
+        renderizarVideos();
+        vrStatus.innerText = "📺 YouTube VR Aberto";
+      }
+    }
 
-        // Configuração otimizada para Zero Lag (Modelo Lite e menor resolução de vídeo)
-        const hands = new Hands({
-            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    function voltarParaHome() {
+      fecharPlayer();
+      document.getElementById('appYouTube').style.display = 'none';
+      document.getElementById('homeScreen').style.display = 'flex';
+      vrStatus.innerText = "🏠 Tela de Início VR";
+    }
+
+    function renderizarVideos() {
+      const grid = document.getElementById('videoGrid');
+      grid.innerHTML = '';
+
+      listaVideos.forEach(video => {
+        grid.innerHTML += `
+          <div class="video-card" onclick="abrirPlayer('${video.id}')">
+            <div class="thumbnail-container">
+              <img src="${video.thumb}">
+              <span class="duration">${video.duration}</span>
+            </div>
+            <div class="video-info">
+              <div class="channel-avatar"></div>
+              <div class="video-details">
+                <h3>${video.title}</h3>
+                <p>${video.channel}</p>
+                <p>${video.views} visualizações • ${video.time}</p>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function abrirPlayer(videoId) {
+      const modal = document.getElementById('videoModal');
+      modal.style.display = 'flex';
+
+      if (player) {
+        player.loadVideoById(videoId);
+      } else {
+        player = new YT.Player('player', {
+          videoId: videoId,
+          playerVars: { 'autoplay': 1, 'controls': 1, 'rel': 0 },
+          events: { 'onStateChange': onPlayerStateChange }
         });
+      }
+      isPlaying = true;
+    }
 
-        hands.setOptions({
-            maxNumHands: 1,
-            modelComplexity: 0, // 0 = Lite (Altíssima performance / Zero lag)
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5
-        });
+    function fecharPlayer() {
+      const modal = document.getElementById('videoModal');
+      if (player && player.stopVideo) {
+        player.stopVideo();
+      }
+      modal.style.display = 'none';
+      isPlaying = false;
+    }
 
-        hands.onResults(onResults);
+    function alternarPlayPause() {
+      if (!player || !player.getPlayerState) return;
+      const state = player.getPlayerState();
+      if (state === YT.PlayerState.PLAYING) {
+        player.pauseVideo();
+      } else {
+        player.playVideo();
+      }
+    }
 
-        // Função para iniciar/reiniciar a câmera com suporte a troca frontal/traseira
-        async function startCamera() {
-            if (window.localStream) {
-                window.localStream.getTracks().forEach(track => track.stop());
+    function onPlayerStateChange(event) {
+      const icon = document.getElementById('playIcon');
+      if (event.data === YT.PlayerState.PLAYING) {
+        isPlaying = true;
+        if(icon) icon.className = 'fa-solid fa-pause';
+      } else {
+        isPlaying = false;
+        if(icon) icon.className = 'fa-solid fa-play';
+      }
+    }
+
+    /* === MEDIAPIPE HAND TRACKING === */
+    const videoElement = document.getElementById('webcam');
+    const canvasElement = document.getElementById('output_canvas');
+    const canvasCtx = canvasElement.getContext('2d');
+    const vrStatus = document.getElementById('vrStatus');
+
+    let pinchCooldown = false;
+    let lastGesture = "";
+
+    const hands = new Hands({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
+
+    hands.setOptions({
+      maxNumHands: 1,
+      modelComplexity: 0,
+      minDetectionConfidence: 0.6,
+      minTrackingConfidence: 0.6
+    });
+
+    hands.onResults(onResults);
+
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
+        videoElement.srcObject = stream;
+        videoElement.onloadedmetadata = () => {
+          videoElement.play();
+          loopCamera();
+        };
+        vrStatus.innerText = "🖐️ Sistema de Mãos Pronto";
+      } catch (e) {
+        vrStatus.innerText = "Erro na câmera!";
+      }
+    }
+
+    async function loopCamera() {
+      if (!videoElement.paused && !videoElement.ended) {
+        await hands.send({ image: videoElement });
+        requestAnimationFrame(loopCamera);
+      }
+    }
+
+    function onResults(results) {
+      canvasElement.width = window.innerWidth;
+      canvasElement.height = window.innerHeight;
+
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        for (const landmarks of results.multiHandLandmarks) {
+          
+          // Desenhar o Esqueleto por cima de TUDO
+          drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, { color: '#00ffcc', lineWidth: 4 });
+          drawLandmarks(canvasCtx, landmarks, { color: '#ff0055', lineWidth: 2, radius: 5 });
+
+          const indexTip = landmarks[8];
+          const thumbTip = landmarks[4];
+
+          const screenX = (1 - indexTip.x) * canvasElement.width;
+          const screenY = indexTip.y * canvasElement.height;
+
+          // Desenhar cursor VR
+          canvasCtx.beginPath();
+          canvasCtx.arc(screenX, screenY, 12, 0, 2 * Math.PI);
+          canvasCtx.fillStyle = '#ff0055';
+          canvasCtx.fill();
+          canvasCtx.strokeStyle = '#ffffff';
+          canvasCtx.lineWidth = 3;
+          canvasCtx.stroke();
+
+          // Gesto de Pinça ou Toque
+          const distancePinch = Math.hypot((indexTip.x - thumbTip.x), (indexTip.y - thumbTip.y));
+          const isFist = checkFistGesture(landmarks);
+
+          if (isFist) {
+            if (lastGesture !== "fist") {
+              lastGesture = "fist";
+              if (player && isPlaying) {
+                player.pauseVideo();
+                vrStatus.innerText = "✊ Punho: Pausando";
+              }
             }
-
-            try {
-                const constraints = {
-                    video: {
-                        facingMode: currentFacingMode,
-                        width: { ideal: 640 },
-                        height: { ideal: 480 }
-                    }
-                };
-
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                window.localStream = stream;
-                videoElement.srcObject = stream;
-
-                videoElement.onloadedmetadata = () => {
-                    videoElement.play();
-                    loopCamera();
-                };
-                statusDiv.innerText = "🖐️ Sistema pronto! Aproxime o dedo dos ícones.";
-            } catch (err) {
-                statusDiv.innerText = "Erro ao acessar a câmera. Verifique as permissões.";
-                console.error(err);
+          } else if (distancePinch < 0.05) {
+            if (!pinchCooldown) {
+              pinchCooldown = true;
+              simularClique(screenX, screenY);
+              setTimeout(() => { pinchCooldown = false; }, 600);
             }
-        }
-
-        async function loopCamera() {
-            if (videoElement.paused || videoElement.ended) return;
-            await hands.send({ image: videoElement });
-            requestAnimationFrame(loopCamera);
-        }
-
-        // Botão de alternar câmera
-        document.getElementById('switchCamBtn').addEventListener('click', () => {
-            currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
-            startCamera();
-        });
-
-        function onResults(results) {
-            canvasElement.width = window.innerWidth;
-            canvasElement.height = window.innerHeight;
-
-            canvasCtx.save();
-            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            
-            // Desenhar feed da câmera
-            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-
-            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                for (const landmarks of results.multiHandLandmarks) {
-                    // Desenhar esqueleto da mão (bones)
-                    drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {color: '#00ffcc', lineWidth: 3});
-                    drawLandmarks(canvasCtx, landmarks, {color: '#ff0055', lineWidth: 1, radius: 4});
-
-                    // Ponta do dedo indicador (Landmark 8)
-                    const indexTip = landmarks[8];
-                    
-                    // Conversão de coordenadas com espelho
-                    const x = (1 - indexTip.x) * canvasElement.width;
-                    const y = indexTip.y * canvasElement.height;
-
-                    // Cursor no dedo
-                    canvasCtx.beginPath();
-                    canvasCtx.arc(x, y, 10, 0, 2 * Math.PI);
-                    canvasCtx.fillStyle = '#ff0055';
-                    canvasCtx.fill();
-                    canvasCtx.strokeStyle = '#ffffff';
-                    canvasCtx.lineWidth = 2;
-                    canvasCtx.stroke();
-
-                    // Verificar toque nos botões do Dock
-                    checkButtonCollision(x, y, appYouTube, 'YouTube');
-                    checkButtonCollision(x, y, appBrowser, 'Browser');
-                }
-            } else {
-                appYouTube.classList.remove('active');
-                appBrowser.classList.remove('active');
+          } else {
+            if (lastGesture === "fist") {
+              lastGesture = "open";
+              if (player && !isPlaying) {
+                player.playVideo();
+                vrStatus.innerText = "🖐️ Mão Aberta: Play";
+              }
             }
-            canvasCtx.restore();
+          }
         }
+      }
 
-        function checkButtonCollision(x, y, element, appName) {
-            const rect = element.getBoundingClientRect();
-            const screenX = window.innerWidth - x; // Ajuste devido ao scaleX(-1) do canvas
+      canvasCtx.restore();
+    }
 
-            if (screenX >= rect.left && screenX <= rect.right && y >= rect.top && y <= rect.bottom) {
-                element.classList.add('active');
-                
-                // Disparar abertura do app se mantiver o dedo por um momento ou toque imediato com cooldown
-                if (!selectCooldown) {
-                    openApp(appName);
-                    selectCooldown = true;
-                    setTimeout(() => selectCooldown = false, 1500);
-                }
-            } else {
-                element.classList.remove('active');
-            }
-        }
+    function checkFistGesture(landmarks) {
+      const tips = [8, 12, 16, 20];
+      const wrist = landmarks[0];
+      let closedFingers = 0;
 
-        function openApp(appName) {
-            if (appName === 'YouTube') {
-                windowYouTube.classList.add('open');
-                windowBrowser.classList.remove('open');
-                statusDiv.innerText = "📺 YouTube aberto no modo VR!";
-            } else if (appName === 'Browser') {
-                windowBrowser.classList.add('open');
-                windowYouTube.classList.remove('open');
-                statusDiv.innerText = "🌐 Navegador aberto no modo VR!";
-            }
-        }
+      tips.forEach(tip => {
+        const dist = Math.hypot(landmarks[tip].x - wrist.x, landmarks[tip].y - wrist.y);
+        if (dist < 0.25) closedFingers++;
+      });
 
-        function closeApp(appName) {
-            if (appName === 'YouTube') windowYouTube.classList.remove('open');
-            if (appName === 'Browser') windowBrowser.classList.remove('open');
-            statusDiv.innerText = "Painel fechado.";
-        }
+      return closedFingers >= 3;
+    }
 
-        // Inicializar
-        startCamera();
-    </script>
+    function simularClique(x, y) {
+      const targetElement = document.elementFromPoint(x, y);
+      if (targetElement) {
+        targetElement.click();
+      }
+    }
+
+    startCamera();
+  </script>
 </body>
 </html>
+
