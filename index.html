@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR Hand Tracking - Apps Virtuais</title>
-    <!-- Importando MediaPipe Hands e utilitários de câmera -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <title>VR Hand Tracking - Apps Reais & Câmera</title>
+    <!-- MediaPipe Hands e utilitários -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     
@@ -15,8 +14,8 @@
             overflow: hidden;
             background: #000;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
         }
-        /* Vídeo oculto, pois renderizamos tudo no Canvas */
         video {
             display: none;
         }
@@ -26,12 +25,13 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            transform: scaleX(-1); /* Efeito espelho */
+            transform: scaleX(-1); /* Espelhamento */
+            z-index: 1;
         }
-        /* Painel de "Apps" Virtuais estilo VR / AR */
-        .ui-container {
+        /* Barra de Menu Estilo VR */
+        .vr-dock {
             position: absolute;
-            top: 30px;
+            bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 10;
@@ -39,154 +39,309 @@
             gap: 20px;
             pointer-events: none;
         }
-        .app-icon {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(12px);
-            border: 2px solid rgba(255, 255, 255, 0.4);
+        .app-btn {
+            background: rgba(20, 20, 30, 0.6);
+            backdrop-filter: blur(16px);
+            border: 2px solid rgba(255, 255, 255, 0.25);
             color: white;
-            padding: 20px 30px;
-            border-radius: 16px;
-            font-size: 18px;
+            padding: 16px 28px;
+            border-radius: 20px;
+            font-size: 16px;
             font-weight: bold;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-            transition: all 0.2s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: transform 0.2s, background 0.2s, border-color 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
-        .app-icon.active {
-            background: rgba(0, 255, 128, 0.4);
+        .app-btn.active {
+            background: rgba(0, 255, 128, 0.35);
             border-color: #00ff80;
-            transform: scale(1.1);
-            box-shadow: 0 0 20px #00ff80;
+            transform: scale(1.15) translateY(-5px);
+            box-shadow: 0 0 25px #00ff80;
+        }
+        /* Controles Superiores */
+        .top-controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            display: flex;
+            gap: 15px;
+        }
+        .control-btn {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 18px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        /* Janelas Flutuantes (Apps VR) */
+        .vr-window {
+            position: absolute;
+            top: 15%;
+            left: 50%;
+            transform: translateX(-50%) scale(0.9);
+            width: 75vw;
+            max-width: 800px;
+            height: 55vh;
+            background: rgba(15, 15, 25, 0.85);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            z-index: 5;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        .vr-window.open {
+            display: flex;
+            opacity: 1;
+            transform: translateX(-50%) scale(1);
+        }
+        .window-header {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #fff;
+            font-weight: bold;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .close-btn {
+            background: #ff4757;
+            border: none;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .window-content {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #000;
         }
         #status {
             position: absolute;
-            bottom: 30px;
+            bottom: 110px;
             left: 50%;
             transform: translateX(-50%);
             color: #fff;
             background: rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(6px);
-            padding: 12px 24px;
-            border-radius: 10px;
-            font-size: 16px;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-size: 14px;
             z-index: 10;
-            border: 1px solid rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.15);
+            pointer-events: none;
         }
     </style>
 </head>
 <body>
 
-    <video class="input_video"></video>
-    <canvas class="output_canvas"></canvas>
+    <video id="webcam" autoplay playsinline muted></video>
+    <canvas id="output_canvas"></canvas>
 
-    <!-- Apps Virtuais na Tela -->
-    <div class="ui-container">
-        <div id="app1" class="app-icon">📁 Arquivos</div>
-        <div id="app2" class="app-icon">🎵 Música</div>
-        <div id="app3" class="app-icon">⚙️ Configs</div>
+    <!-- Controles de Câmera -->
+    <div class="top-controls">
+        <button class="control-btn" id="switchCamBtn">🔄 Trocar Câmera</button>
     </div>
 
-    <div id="status">Aguardando permissão da câmera e detecção da mão...</div>
+    <div id="status">Iniciando sistema de rastreamento...</div>
+
+    <!-- Janelas de Apps Virtuais (VR) -->
+    <div id="windowYouTube" class="vr-window">
+        <div class="window-header">
+            <span>📺 YouTube VR</span>
+            <button class="close-btn" onclick="closeApp('YouTube')">X Fechar</button>
+        </div>
+        <!-- Incorporando o YouTube de forma interativa -->
+        <iframe class="window-content" src="https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    </div>
+
+    <div id="windowBrowser" class="vr-window">
+        <div class="window-header">
+            <span>🌐 Navegador Web</span>
+            <button class="close-btn" onclick="closeApp('Browser')">X Fechar</button>
+        </div>
+        <iframe class="window-content" src="https://wikipedia.org"></iframe>
+    </div>
+
+    <!-- Dock de Apps (Menu Inferior) -->
+    <div class="vr-dock">
+        <div id="appYouTube" class="app-btn">📺 YouTube</div>
+        <div id="appBrowser" class="app-btn">🌐 Navegador</div>
+    </div>
 
     <script>
-        const videoElement = document.getElementsByClassName('input_video')[0];
-        const canvasElement = document.getElementsByClassName('output_canvas')[0];
+        const videoElement = document.getElementById('webcam');
+        const canvasElement = document.getElementById('output_canvas');
         const canvasCtx = canvasElement.getContext('2d');
-        
-        const app1 = document.getElementById('app1');
-        const app2 = document.getElementById('app2');
-        const app3 = document.getElementById('app3');
         const statusDiv = document.getElementById('status');
+        
+        const appYouTube = document.getElementById('appYouTube');
+        const appBrowser = document.getElementById('appBrowser');
+        
+        const windowYouTube = document.getElementById('windowYouTube');
+        const windowBrowser = document.getElementById('windowBrowser');
 
-        function onResults(results) {
-            // Ajustar tamanho do canvas à tela
-            canvasElement.width = window.innerWidth;
-            canvasElement.height = window.innerHeight;
+        let currentFacingMode = 'user'; // 'user' = frontal, 'environment' = traseira
+        let activeApp = null;
+        let selectCooldown = false;
 
-            canvasCtx.save();
-            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            
-            // Desenhar feed da câmera no fundo
-            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-
-            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                statusDiv.innerText = "🖐️ Mão detectada! Aproxime o dedo indicador dos ícones para clicar.";
-
-                for (const landmarks of results.multiHandLandmarks) {
-                    // Desenhar o esqueleto (bones) da mão
-                    drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {color: '#00ffcc', lineWidth: 4});
-                    drawLandmarks(canvasCtx, landmarks, {color: '#ff0055', lineWidth: 2, radius: 5});
-
-                    // Coordenadas da ponta do dedo indicador (Landmark 8)
-                    const indexTip = landmarks[8];
-                    
-                    // Converter coordenadas normalizadas (0 a 1) para pixels da tela (com inversão de espelho)
-                    const x = (1 - indexTip.x) * canvasElement.width;
-                    const y = indexTip.y * canvasElement.height;
-
-                    // Desenhar um cursor visual na ponta do dedo
-                    canvasCtx.beginPath();
-                    canvasCtx.arc(x, y, 12, 0, 2 * Math.PI);
-                    canvasCtx.fillStyle = '#ff0055';
-                    canvasCtx.fill();
-                    canvasCtx.lineWidth = 3;
-                    canvasCtx.strokeStyle = '#ffffff';
-                    canvasCtx.stroke();
-
-                    // Verificar colisão com os botões/apps
-                    checkCollision(x, y, app1, "Arquivos");
-                    checkCollision(x, y, app2, "Música");
-                    checkCollision(x, y, app3, "Configurações");
-                }
-            } else {
-                statusDiv.innerText = "👋 Coloque sua mão na frente da câmera para interagir.";
-                app1.classList.remove('active');
-                app2.classList.remove('active');
-                app3.classList.remove('active');
-            }
-            canvasCtx.restore();
-        }
-
-        function checkCollision(x, y, element, appName) {
-            const rect = element.getBoundingClientRect();
-            // Como o canvas está espelhado com scaleX(-1), ajustamos o rect x proporcionalmente ou checamos a posição de tela
-            // rect usa as coordenadas de tela normais. Vamos converter 'x' para coordenadas de tela reais sem o espelho do canvas:
-            const screenX = window.innerWidth - x;
-
-            if (screenX >= rect.left && screenX <= rect.right && y >= rect.top && y <= rect.bottom) {
-                element.classList.add('active');
-                statusDiv.innerText = `✨ Você clicou no app: ${appName}!`;
-            } else {
-                element.classList.remove('active');
-            }
-        }
-
-        // Configuração do MediaPipe Hands
+        // Configuração otimizada para Zero Lag (Modelo Lite e menor resolução de vídeo)
         const hands = new Hands({
             locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
         });
 
         hands.setOptions({
             maxNumHands: 1,
-            modelComplexity: 1,
-            minDetectionConfidence: 0.6,
-            minTrackingConfidence: 0.6
+            modelComplexity: 0, // 0 = Lite (Altíssima performance / Zero lag)
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
         });
 
         hands.onResults(onResults);
 
-        // Inicialização da Câmera
-        const camera = new Camera(videoElement, {
-            onFrame: async () => {
-                await hands.send({image: videoElement});
-            },
-            width: 1280,
-            height: 720
+        // Função para iniciar/reiniciar a câmera com suporte a troca frontal/traseira
+        async function startCamera() {
+            if (window.localStream) {
+                window.localStream.getTracks().forEach(track => track.stop());
+            }
+
+            try {
+                const constraints = {
+                    video: {
+                        facingMode: currentFacingMode,
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    }
+                };
+
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                window.localStream = stream;
+                videoElement.srcObject = stream;
+
+                videoElement.onloadedmetadata = () => {
+                    videoElement.play();
+                    loopCamera();
+                };
+                statusDiv.innerText = "🖐️ Sistema pronto! Aproxime o dedo dos ícones.";
+            } catch (err) {
+                statusDiv.innerText = "Erro ao acessar a câmera. Verifique as permissões.";
+                console.error(err);
+            }
+        }
+
+        async function loopCamera() {
+            if (videoElement.paused || videoElement.ended) return;
+            await hands.send({ image: videoElement });
+            requestAnimationFrame(loopCamera);
+        }
+
+        // Botão de alternar câmera
+        document.getElementById('switchCamBtn').addEventListener('click', () => {
+            currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+            startCamera();
         });
-        
-        camera.start().catch(err => {
-            statusDiv.innerText = "Erro ao acessar a câmera. Verifique as permissões.";
-            console.error(err);
-        });
+
+        function onResults(results) {
+            canvasElement.width = window.innerWidth;
+            canvasElement.height = window.innerHeight;
+
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            
+            // Desenhar feed da câmera
+            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                for (const landmarks of results.multiHandLandmarks) {
+                    // Desenhar esqueleto da mão (bones)
+                    drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {color: '#00ffcc', lineWidth: 3});
+                    drawLandmarks(canvasCtx, landmarks, {color: '#ff0055', lineWidth: 1, radius: 4});
+
+                    // Ponta do dedo indicador (Landmark 8)
+                    const indexTip = landmarks[8];
+                    
+                    // Conversão de coordenadas com espelho
+                    const x = (1 - indexTip.x) * canvasElement.width;
+                    const y = indexTip.y * canvasElement.height;
+
+                    // Cursor no dedo
+                    canvasCtx.beginPath();
+                    canvasCtx.arc(x, y, 10, 0, 2 * Math.PI);
+                    canvasCtx.fillStyle = '#ff0055';
+                    canvasCtx.fill();
+                    canvasCtx.strokeStyle = '#ffffff';
+                    canvasCtx.lineWidth = 2;
+                    canvasCtx.stroke();
+
+                    // Verificar toque nos botões do Dock
+                    checkButtonCollision(x, y, appYouTube, 'YouTube');
+                    checkButtonCollision(x, y, appBrowser, 'Browser');
+                }
+            } else {
+                appYouTube.classList.remove('active');
+                appBrowser.classList.remove('active');
+            }
+            canvasCtx.restore();
+        }
+
+        function checkButtonCollision(x, y, element, appName) {
+            const rect = element.getBoundingClientRect();
+            const screenX = window.innerWidth - x; // Ajuste devido ao scaleX(-1) do canvas
+
+            if (screenX >= rect.left && screenX <= rect.right && y >= rect.top && y <= rect.bottom) {
+                element.classList.add('active');
+                
+                // Disparar abertura do app se mantiver o dedo por um momento ou toque imediato com cooldown
+                if (!selectCooldown) {
+                    openApp(appName);
+                    selectCooldown = true;
+                    setTimeout(() => selectCooldown = false, 1500);
+                }
+            } else {
+                element.classList.remove('active');
+            }
+        }
+
+        function openApp(appName) {
+            if (appName === 'YouTube') {
+                windowYouTube.classList.add('open');
+                windowBrowser.classList.remove('open');
+                statusDiv.innerText = "📺 YouTube aberto no modo VR!";
+            } else if (appName === 'Browser') {
+                windowBrowser.classList.add('open');
+                windowYouTube.classList.remove('open');
+                statusDiv.innerText = "🌐 Navegador aberto no modo VR!";
+            }
+        }
+
+        function closeApp(appName) {
+            if (appName === 'YouTube') windowYouTube.classList.remove('open');
+            if (appName === 'Browser') windowBrowser.classList.remove('open');
+            statusDiv.innerText = "Painel fechado.";
+        }
+
+        // Inicializar
+        startCamera();
     </script>
 </body>
 </html>
