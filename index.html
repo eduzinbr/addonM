@@ -3,42 +3,1143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StarCat Add-on Creator - Dashboard</title>
-    <link rel="stylesheet" href="style.css">
-    <!-- JSZip via CDN for client-side .mcaddon packaging -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <title>Bedrock Add-on Maker - StarCat</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            background-color: #121212;
+            background-image: 
+                radial-gradient(#252525 15%, transparent 16%), 
+                radial-gradient(#181818 15%, transparent 16%);
+            background-size: 24px 24px;
+            background-position: 0 0, 12px 12px;
+            color: #ffffff;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 12px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        /* Cabeçalho Estilo Minecraft UI */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #202020;
+            border: 4px solid #000;
+            box-shadow: inset 2px 2px 0px #444, inset -2px -2px 0px #111;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .btn-dots {
+            background: #737373;
+            border-top: 3px solid #b8b8b8;
+            border-left: 3px solid #b8b8b8;
+            border-right: 3px solid #373737;
+            border-bottom: 3px solid #373737;
+            color: #fff;
+            font-size: 1.1rem;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            text-shadow: 1px 1px #000;
+            min-width: 40px;
+            text-align: center;
+        }
+        .btn-dots:active {
+            background: #5c5c5c;
+            border-top: 3px solid #373737;
+            border-left: 3px solid #373737;
+            border-right: 3px solid #b8b8b8;
+            border-bottom: 3px solid #b8b8b8;
+        }
+
+        .header-title { text-align: center; flex-grow: 1; }
+        header h1 { font-size: 1rem; color: #fff; text-shadow: 2px 2px #000; text-transform: uppercase; }
+        header p { font-size: 0.6rem; color: #55ff55; margin-top: 2px; text-transform: uppercase; text-shadow: 1px 1px #000; }
+
+        /* Container Principal / Dashboard */
+        .dashboard { display: none; flex-direction: column; gap: 10px; flex-grow: 1; width: 100%; max-width: 440px; margin: 0 auto; }
+        .dashboard.active { display: flex; }
+        .dashboard h2 { font-size: 0.85rem; color: #aaa; text-align: center; text-shadow: 1px 1px #000; margin-bottom: 2px; text-transform: uppercase; }
+
+        /* Grade 3x3 de Botões */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            max-height: 65vh;
+            overflow-y: auto;
+            padding: 4px;
+        }
+
+        /* Botão Quadrado Estilo Minecraft */
+        .mc-btn-square {
+            background-color: #737373;
+            border-top: 3px solid #b8b8b8;
+            border-left: 3px solid #b8b8b8;
+            border-right: 3px solid #373737;
+            border-bottom: 3px solid #373737;
+            color: #ffffff;
+            text-shadow: 2px 2px 0px #111;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            font-size: 0.6rem;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: inset 0 0 0 1px #444;
+            padding: 4px;
+            word-break: break-all;
+            text-align: center;
+        }
+        .mc-btn-square:active {
+            background-color: #5c5c5c;
+            border-top: 3px solid #373737;
+            border-left: 3px solid #373737;
+            border-right: 3px solid #b8b8b8;
+            border-bottom: 3px solid #b8b8b8;
+        }
+
+        /* Botão de Adicionar (+) Estilo Verde Minecraft */
+        .mc-btn-add {
+            background-color: #3b7a1f;
+            border-top: 3px solid #6ed138;
+            border-left: 3px solid #6ed138;
+            border-right: 3px solid #1a380d;
+            border-bottom: 3px solid #1a380d;
+            text-shadow: 2px 2px 0px #0b1a05;
+        }
+        .mc-btn-add:active {
+            background-color: #2e5e17;
+            border-top: 3px solid #1a380d;
+            border-left: 3px solid #1a380d;
+            border-right: 3px solid #6ed138;
+            border-bottom: 3px solid #6ed138;
+        }
+
+        .btn-subtitle { font-size: 0.45rem; color: #ccc; }
+
+        /* Ícones Vetoriais */
+        .mc-icon {
+            width: 22px;
+            height: 22px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            image-rendering: pixelated;
+        }
+
+        /* Paineis / Telas Cheias Estilo Menu do Jogo */
+        .panel {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #181818;
+            background-image: radial-gradient(#262626 15%, transparent 16%);
+            background-size: 20px 20px;
+            border: none;
+            padding: 15px;
+            z-index: 1000;
+            overflow-y: auto;
+            box-sizing: border-box;
+            color: #fff;
+        }
+        .panel.active { display: block; }
+        .panel h2 { font-size: 1rem; color: #fff; margin-bottom: 12px; text-transform: uppercase; border-bottom: 3px solid #444; padding-bottom: 6px; text-shadow: 2px 2px #000; text-align: center; }
+
+        /* CARDS DE PROJETOS GRANDES E LARGOS */
+        .projects-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 10px;
+        }
+        
+        .project-card {
+            background: #202020;
+            border-top: 4px solid #666;
+            border-left: 4px solid #666;
+            border-right: 4px solid #111;
+            border-bottom: 4px solid #111;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: inset 2px 2px 0px #333;
+            cursor: pointer;
+            width: 100%;
+            min-height: 85px;
+        }
+        .project-card:active {
+            background: #181818;
+        }
+        .project-card.active-proj {
+            background: #183312;
+            border-top: 4px solid #6ed138;
+            border-left: 4px solid #6ed138;
+            border-right: 4px solid #0d1a05;
+            border-bottom: 4px solid #0d1a05;
+            box-shadow: inset 2px 2px 0px #2c5c17;
+        }
+
+        .project-card-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Badge de Ícone/Imagem no Card */
+        .project-color-badge {
+            width: 45px;
+            height: 45px;
+            background-color: #3b7a1f;
+            border-top: 2px solid #fff;
+            border-left: 2px solid #fff;
+            border-right: 2px solid #000;
+            border-bottom: 2px solid #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            box-shadow: inset 1px 1px 0px rgba(255,255,255,0.4);
+            flex-shrink: 0;
+            background-size: cover;
+            background-position: center;
+            image-rendering: pixelated;
+        }
+
+        .project-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .project-title {
+            font-weight: bold;
+            font-size: 0.95rem;
+            color: #fff;
+            text-shadow: 1px 1px #000;
+            text-transform: uppercase;
+        }
+        .project-details {
+            font-size: 0.65rem;
+            color: #ccc;
+            text-transform: uppercase;
+        }
+        .project-card.active-proj .project-details {
+            color: #8af88a;
+        }
+
+        /* Campos de Formulário Texturizados Estilo Minecraft */
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-size: 0.75rem; margin-bottom: 4px; color: #ccc; font-weight: bold; text-transform: uppercase; text-shadow: 1px 1px #000; }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            background: #0d0d0d;
+            border-top: 2px solid #333;
+            border-left: 2px solid #333;
+            border-right: 2px solid #555;
+            border-bottom: 2px solid #555;
+            color: #fff;
+            border-radius: 0px;
+            font-size: 0.85rem;
+            font-family: 'Courier New', Courier, monospace;
+            box-shadow: inset 2px 2px 0px #000;
+        }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: #55ff55; background: #141414; }
+
+        /* Botão Verde de Ação Principal */
+        .btn-action {
+            background-color: #3b7a1f;
+            border-top: 3px solid #6ed138;
+            border-left: 3px solid #6ed138;
+            border-right: 3px solid #1a380d;
+            border-bottom: 3px solid #1a380d;
+            color: #ffffff;
+            text-shadow: 2px 2px 0px #0b1a05;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            padding: 12px;
+            width: 100%;
+            cursor: pointer;
+            margin-top: 8px;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+        }
+        .btn-action:active { background-color: #2e5e17; border-top: 3px solid #1a380d; border-left: 3px solid #1a380d; border-right: 3px solid #6ed138; border-bottom: 3px solid #6ed138; }
+
+        /* Botão Vermelho de Excluir */
+        .btn-delete {
+            background-color: #9e2a2b;
+            border-top: 3px solid #d9534f;
+            border-left: 3px solid #d9534f;
+            border-right: 3px solid #5a1718;
+            border-bottom: 3px solid #5a1718;
+            color: #ffffff;
+            text-shadow: 1px 1px #000;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            padding: 10px;
+            width: 100%;
+            cursor: pointer;
+            margin-top: 6px;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+        .btn-delete:active { background-color: #7a1f20; }
+
+        /* Botão Voltar Cinza */
+        .btn-back {
+            background-color: #737373;
+            border-top: 3px solid #b8b8b8;
+            border-left: 3px solid #b8b8b8;
+            border-right: 3px solid #373737;
+            border-bottom: 3px solid #373737;
+            color: #fff;
+            text-shadow: 1px 1px #000;
+            padding: 8px 14px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+        .btn-back:active { background-color: #5c5c5c; border-top: 3px solid #373737; border-left: 3px solid #373737; border-right: 3px solid #b8b8b8; border-bottom: 3px solid #b8b8b8; }
+
+        /* Caixa de Código Gerado */
+        .output-box { margin-top: 12px; background: #0a0a0a; border: 2px solid #333; padding: 10px; box-shadow: inset 2px 2px 0px #000; }
+        .output-box h3 { font-size: 0.7rem; color: #f39c12; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; text-transform: uppercase; text-shadow: 1px 1px #000; }
+        pre { font-size: 0.7rem; color: #55ff55; overflow-x: auto; white-space: pre-wrap; word-break: break-all; max-height: 140px; font-family: 'Courier New', Courier, monospace; }
+        
+        .copy-btn {
+            background: #444;
+            border-top: 2px solid #777;
+            border-left: 2px solid #777;
+            border-right: 2px solid #111;
+            border-bottom: 2px solid #111;
+            color: #fff;
+            padding: 3px 6px;
+            font-size: 0.65rem;
+            cursor: pointer;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        footer { text-align: center; margin-top: 12px; font-size: 0.6rem; color: #777; text-transform: uppercase; text-shadow: 1px 1px #000; }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h1>StarCat Add-on Creator</h1>
-        <div class="card" style="text-align: center;">
-            <p style="color: var(--text-muted); margin-bottom: 15px;">Crie Blocos, Itens, Scripts e Mobs para Minecraft Bedrock e baixe seu .mcaddon pronto!</p>
-        </div>
 
-        <div class="nav-grid">
-            <div class="card" style="margin-bottom: 0; text-align: center; cursor: pointer;" onclick="location.href='bloco.html'">
-                <h3>🧱 Bloco</h3>
-                <p style="color: var(--text-muted); font-size: 14px; margin-top: 5px;">Criados: <span id="count-bloco">0</span></p>
-            </div>
-            <div class="card" style="margin-bottom: 0; text-align: center; cursor: pointer;" onclick="location.href='item.html'">
-                <h3>⚔️ Item</h3>
-                <p style="color: var(--text-muted); font-size: 14px; margin-top: 5px;">Criados: <span id="count-item">0</span></p>
-            </div>
-            <div class="card" style="margin-bottom: 0; text-align: center; cursor: pointer;" onclick="location.href='script.html'">
-                <h3>📜 Script</h3>
-                <p style="color: var(--text-muted); font-size: 14px; margin-top: 5px;">Criados: <span id="count-script">0</span></p>
-            </div>
-            <div class="card" style="margin-bottom: 0; text-align: center; cursor: pointer;" onclick="location.href='mob.html'">
-                <h3>🧟 Mob</h3>
-                <p style="color: var(--text-muted); font-size: 14px; margin-top: 5px;">Criados: <span id="count-mob">0</span></p>
-            </div>
+    <header>
+        <button class="btn-dots" onclick="openPanel('projectsPanel'); renderProjectsList();" title="Gerenciar Projetos">⋮</button>
+        <div class="header-title">
+            <h1>Bedrock Add-on Maker</h1>
+            <p id="activeProjectLabel">Projeto: Meu Addon</p>
         </div>
+        <button class="btn-dots" onclick="openPackPanel()" title="Compactar Add-on" style="font-size: 1.4rem; padding: 2px 10px;">📦</button>
+    </header>
 
-        <div class="card">
-            <button class="btn-success" onclick="exportMcAddon()">📦 Baixar Add-on (.mcaddon)</button>
-            <button class="btn-secondary" onclick="limparDados()" style="margin-bottom: 0;">🗑️ Limpar Todos os Dados</button>
+    <!-- TELA INICIAL (Grade com + Novo e componentes salvos) -->
+    <div id="home-dashboard" class="dashboard active">
+        <h2>Componentes do Projeto</h2>
+        <div id="homeGrid" class="menu-grid">
+            <!-- Preenchido via JavaScript -->
         </div>
     </div>
-    <script src="builder.js"></script>
+
+    <!-- PAINEL DE GERENCIAMENTO DE PROJETOS -->
+    <div id="projectsPanel" class="panel">
+        <button class="btn-back" onclick="goHome()">Voltar ao Menu</button>
+        <h2>Gerenciar Projetos</h2>
+        
+        <div id="createActionContainer">
+            <button class="btn-action" onclick="showNewProjectInput()">+ Criar Novo Projeto</button>
+        </div>
+
+        <div id="newProjectForm" style="display: none; margin-top: 10px; background: #202020; border: 3px solid #444; padding: 12px; box-shadow: inset 1px 1px #000;">
+            <label>Nome do Novo Addon</label>
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
+                <input type="text" id="newProjectName" placeholder="Ex: StarCatPack..." style="margin:0;">
+                
+                <label style="margin-top: 6px;">Ícone / Imagem do Projeto</label>
+                <div style="display: flex; justify-content: center; margin: 6px 0;">
+                    <input type="file" id="newProjectImageFile" accept="image/*" onchange="handleImageUpload(event)" style="display: none;">
+                    <div id="imagePreview" class="project-color-badge" style="width: 75px; height: 75px; font-size: 2rem; cursor: pointer;" onclick="document.getElementById('newProjectImageFile').click()" title="Clique para escolher a imagem">📁</div>
+                </div>
+
+                <div style="display: flex; gap: 6px; margin-top: 8px;">
+                    <button class="btn-action" style="margin:0; background-color: #3b7a1f;" onclick="createNewProject()">Salvar Projeto</button>
+                    <button class="btn-back" style="margin:0; width: 100px; text-align:center;" onclick="hideNewProjectInput()">Cancelar</button>
+                </div>
+            </div>
+        </div>
+
+        <label style="margin: 20px 0 8px 0; display:block;">Projetos Salvos</label>
+        <div id="projectsListContainer" class="projects-container">
+            <!-- Listado via JS -->
+        </div>
+    </div>
+
+    <!-- PAINEL DE COMPACTAÇÃO / MANIFESTOS (R e B Separados) -->
+    <div id="packPanel" class="panel">
+        <button class="btn-back" onclick="goHome()">Voltar ao Menu</button>
+        <h2>Compactar Add-on</h2>
+        
+        <!-- Botões de Alternância [ R ] e [ B ] -->
+        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+            <button id="tabRpBtn" class="btn-action" style="flex: 1; background-color: #2b5c8f; border-top-color: #4da6ff; border-left-color: #4da6ff; border-right-color: #102a45; border-bottom-color: #102a45; margin: 0;" onclick="switchPackTab('rp')">[ R ] Resource Pack</button>
+            <button id="tabBpBtn" class="btn-action" style="flex: 1; background-color: #444; border-top-color: #777; border-left-color: #777; border-right-color: #111; border-bottom-color: #111; margin: 0;" onclick="switchPackTab('bp')">[ B ] Behavior Pack</button>
+        </div>
+
+        <!-- Seção Resource Pack (R) -->
+        <div id="rpSection">
+            <div class="form-group" style="text-align: center;">
+                <label>Ícone do Resource Pack (pack_icon.png)</label>
+                <input type="file" id="rpIconFile" accept="image/*" onchange="handleRpIconUpload(event)" style="display: none;">
+                <div id="rpIconPreview" class="project-color-badge" style="width: 85px; height: 85px; margin: 8px auto; font-size: 2.2rem; cursor: pointer;" onclick="document.getElementById('rpIconFile').click()" title="Clique para alterar o ícone">📦</div>
+            </div>
+
+            <div class="form-group">
+                <label>Nome do Resource Pack</label>
+                <input type="text" id="rpNameInput" placeholder="Nome do Resource Pack">
+            </div>
+
+            <div class="form-group">
+                <label>Descrição do Resource Pack</label>
+                <textarea id="rpDescInput" rows="2" placeholder="Descrição do resource pack..." style="resize: vertical;"></textarea>
+            </div>
+        </div>
+
+        <!-- Seção Behavior Pack (B) -->
+        <div id="bpSection" style="display: none;">
+            <div class="form-group" style="text-align: center;">
+                <label>Ícone do Behavior Pack (pack_icon.png)</label>
+                <input type="file" id="bpIconFile" accept="image/*" onchange="handleBpIconUpload(event)" style="display: none;">
+                <div id="bpIconPreview" class="project-color-badge" style="width: 85px; height: 85px; margin: 8px auto; font-size: 2.2rem; cursor: pointer;" onclick="document.getElementById('bpIconFile').click()" title="Clique para alterar o ícone">📦</div>
+            </div>
+
+            <div class="form-group">
+                <label>Nome do Behavior Pack</label>
+                <input type="text" id="bpNameInput" placeholder="Nome do Behavior Pack">
+            </div>
+
+            <div class="form-group">
+                <label>Descrição do Behavior Pack</label>
+                <textarea id="bpDescInput" rows="2" placeholder="Descrição do behavior pack..." style="resize: vertical;"></textarea>
+            </div>
+
+            <button class="btn-action" style="background-color: #3b7a1f;" onclick="downloadAddon()">Baixar Addon</button>
+        </div>
+    </div>
+
+    <!-- TELA DE SELEÇÃO DE CRIAÇÃO (Abre ao clicar no botão "+") -->
+    <div id="creatorSelector" class="panel">
+        <button class="btn-back" onclick="goHome()">Voltar ao Menu</button>
+        <h2>Criar Novo Componente</h2>
+        <div class="menu-grid" style="max-height: none;">
+            <button class="mc-btn-square" onclick="openPanel('blocks'); resetForm('block');">
+                <svg class="mc-icon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+                Bloco
+            </button>
+            <button class="mc-btn-square" onclick="openPanel('items'); resetForm('item');">
+                <svg class="mc-icon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+                    <path d="M14.5 3.5L20.5 9.5L9 21H3V15L14.5 3.5Z"/>
+                </svg>
+                Item
+            </button>
+            <button class="mc-btn-square" onclick="openPanel('mobs'); resetForm('mob');">
+                <svg class="mc-icon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+                    <rect x="4" y="4" width="16" height="16" rx="2"/>
+                    <circle cx="9" cy="10" r="1.5" fill="#fff"/>
+                    <circle cx="15" cy="10" r="1.5" fill="#fff"/>
+                    <path d="M9 15h6"/>
+                </svg>
+                Mob
+            </button>
+            <button class="mc-btn-square" onclick="openPanel('scripts'); resetForm('script');">
+                <svg class="mc-icon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+                    <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+                </svg>
+                Script JS
+            </button>
+        </div>
+    </div>
+
+    <!-- PAINEL BLOCOS -->
+    <div id="blocks" class="panel">
+        <button class="btn-back" onclick="goHome()">Voltar ao Menu</button>
+        <h2 id="blockPanelTitle">Configurar Bloco</h2>
+        <input type="hidden" id="blockEditIndex" value="">
+        <div class="form-group">
+            <label>Namespace:ID</label>
+            <input type="text" id="blockId" value="starcat:bloco_custom">
+        </div>
+        <div class="form-group">
+            <label>Dureza (Hardness)</label>
+            <input type="number" id="blockHardness" value="3.0">
+        </div>
+        <div class="form-group">
+            <label>Nome da Textura (PNG)</label>
+            <input type="text" id="blockTexture" value="custom_block">
+        </div>
+        <button class="btn-action" onclick="saveAndGenerateBlock()">Salvar Alterações</button>
+        <button id="blockDeleteBtn" class="btn-delete" style="display:none;" onclick="deleteCurrentItem()">Excluir Componente</button>
+        
+        <div class="output-box">
+            <h3>Resultado <button class="copy-btn" onclick="copyText('blockOutput')">Copiar</button></h3>
+            <pre id="blockOutput">// Preencha e clique em salvar...</pre>
+        </div>
+    </div>
+
+    <!-- PAINEL ITENS -->
+    <div id="items" class="panel">
+        <button class="btn-back" onclick="goHome()">Voltar ao Menu</button>
+        <h2 id="itemPanelTitle">Configurar Item</h2>
+        <input type="hidden" id="itemEditIndex" value="">
+        <div class="form-group">
+            <label>Namespace:ID</label>
+            <input type="text" id="itemId" value="starcat:espada_rubi">
+        </div>
+        <div class="form-group">
+            <label>Nome Exibido</label>
+            <input type="text" id="itemName" value="Espada de Rubi">
+        </div>
+        <div class="form-group">
+            <label>Categoria do Criativo</label>
+            <select id="itemCategory">
+                <option value="equipment">Equipamentos</option>
+                <option value="items">Itens</option>
+                <option value="nature">Natureza</option>
+            </select>
+        </div>
+        <button class="btn-action" onclick="saveAndGenerateItem()">Salvar Alterações</button>
+        <button id="itemDeleteBtn" class="btn-delete" style="display:none;" onclick="deleteCurrentItem()">Excluir Componente</button>
+        
+        <div class="output-box">
+            <h3>Resultado <button class="copy-btn" onclick="copyText('itemOutput')">Copiar</button></h3>
+            <pre id="itemOutput">// Preencha e clique em salvar...</pre>
+        </div>
+    </div>
+
+    <!-- PAINEL MOBS -->
+    <div id="mobs" class="panel">
+        <button class="btn-back" onclick="goHome()">Voltar ao Menu</button>
+        <h2 id="mobPanelTitle">Configurar Mob</h2>
+        <input type="hidden" id="mobEditIndex" value="">
+        <div class="form-group">
+            <label>Namespace:ID</label>
+            <input type="text" id="mobId" value="starcat:boss_guard">
+        </div>
+        <div class="form-group">
+            <label>Vida Máxima</label>
+            <input type="number" id="mobHealth" value="100">
+        </div>
+        <div class="form-group">
+            <label>Velocidade de Movimento</label>
+            <input type="number" step="0.05" id="mobSpeed" value="0.3">
+        </div>
+        <button class="btn-action" onclick="saveAndGenerateMob()">Salvar Alterações</button>
+        <button id="mobDeleteBtn" class="btn-delete" style="display:none;" onclick="deleteCurrentItem()">Excluir Componente</button>
+        
+        <div class="output-box">
+            <h3>Resultado <button class="copy-btn" onclick="copyText('mobOutput')">Copiar</button></h3>
+            <pre id="mobOutput">// Preencha e clique em salvar...</pre>
+        </div>
+    </div>
+
+    <!-- PAINEL SCRIPTS -->
+    <div id="scripts" class="panel">
+        <button class="btn-back" onclick="goHome()">Voltar ao Menu</button>
+        <h2 id="scriptPanelTitle">Configurar Script JS</h2>
+        <input type="hidden" id="scriptEditIndex" value="">
+        <div class="form-group">
+            <label>Tipo de Evento (@minecraft/server)</label>
+            <select id="scriptType">
+                <option value="chat">Comando no Chat (!menu)</option>
+                <option value="playerJoin">Mensagem de Boas-vindas</option>
+                <option value="itemUse">Habilidade ao Usar Item</option>
+            </select>
+        </div>
+        <button class="btn-action" onclick="saveAndGenerateScript()">Salvar Alterações</button>
+        <button id="scriptDeleteBtn" class="btn-delete" style="display:none;" onclick="deleteCurrentItem()">Excluir Componente</button>
+        
+        <div class="output-box">
+            <h3>Resultado <button class="copy-btn" onclick="copyText('scriptOutput')">Copiar</button></h3>
+            <pre id="scriptOutput">// Selecione e clique em salvar...</pre>
+        </div>
+    </div>
+
+    <footer>
+        EQUIPE EX / StarCat Systems &copy; 2026
+    </footer>
+
+    <script>
+        let projects = JSON.parse(localStorage.getItem('starcat_projects') || 'null');
+        let activeProjectId = localStorage.getItem('starcat_active_project') || null;
+        let uploadedProjectImage = '';
+
+        if (!projects || projects.length === 0) {
+            let oldAddons = JSON.parse(localStorage.getItem('starcat_addons') || '[]');
+            projects = [
+                { id: 'proj_' + Date.now(), name: 'Addon Principal', desc: '', image: '', items: oldAddons }
+            ];
+            activeProjectId = projects[0].id;
+            saveProjects();
+        } else if (!activeProjectId || !projects.some(p => p.id === activeProjectId)) {
+            activeProjectId = projects[0].id;
+        }
+
+        function saveProjects() {
+            localStorage.setItem('starcat_projects', JSON.stringify(projects));
+            localStorage.setItem('starcat_active_project', activeProjectId);
+        }
+
+        function getCurrentProject() {
+            return projects.find(p => p.id === activeProjectId) || projects[0];
+        }
+
+        let currentEditingIndex = null;
+
+        function openPanel(panelId) {
+            document.getElementById('home-dashboard').classList.remove('active');
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.getElementById(panelId).classList.add('active');
+        }
+
+        function goHome() {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.getElementById('home-dashboard').classList.add('active');
+            updateHeaderLabel();
+            renderHomeGrid();
+        }
+
+        function updateHeaderLabel() {
+            const proj = getCurrentProject();
+            document.getElementById('activeProjectLabel').innerText = "Projeto: " + proj.name;
+        }
+
+        function showNewProjectInput() {
+            document.getElementById('createActionContainer').style.display = 'none';
+            document.getElementById('newProjectForm').style.display = 'block';
+            document.getElementById('newProjectName').focus();
+        }
+
+        function hideNewProjectInput() {
+            document.getElementById('newProjectForm').style.display = 'none';
+            document.getElementById('createActionContainer').style.display = 'block';
+            document.getElementById('newProjectName').value = '';
+            document.getElementById('newProjectImageFile').value = '';
+            uploadedProjectImage = '';
+            const preview = document.getElementById('imagePreview');
+            preview.style.backgroundImage = '';
+            preview.innerText = '📁';
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedProjectImage = e.target.result;
+                    const preview = document.getElementById('imagePreview');
+                    preview.style.backgroundImage = `url(${uploadedProjectImage})`;
+                    preview.innerText = '';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function switchPackTab(tab) {
+            const proj = getCurrentProject();
+            if (!proj.rp) proj.rp = { name: proj.name + " - RP", desc: proj.desc || "", image: proj.image || "" };
+            if (!proj.bp) proj.bp = { name: proj.name + " - BP", desc: proj.desc || "", image: proj.image || "" };
+
+            const rpSec = document.getElementById('rpSection');
+            const bpSec = document.getElementById('bpSection');
+            const rpBtn = document.getElementById('tabRpBtn');
+            const bpBtn = document.getElementById('tabBpBtn');
+
+            if (tab === 'rp') {
+                rpSec.style.display = 'block';
+                bpSec.style.display = 'none';
+                rpBtn.style.backgroundColor = '#2b5c8f';
+                rpBtn.style.borderTopColor = '#4da6ff';
+                rpBtn.style.borderLeftColor = '#4da6ff';
+                rpBtn.style.borderRightColor = '#102a45';
+                rpBtn.style.borderBottomColor = '#102a45';
+                bpBtn.style.backgroundColor = '#444';
+                bpBtn.style.borderTopColor = '#777';
+                bpBtn.style.borderLeftColor = '#777';
+                bpBtn.style.borderRightColor = '#111';
+                bpBtn.style.borderBottomColor = '#111';
+            } else {
+                rpSec.style.display = 'none';
+                bpSec.style.display = 'block';
+                bpBtn.style.backgroundColor = '#3b7a1f';
+                bpBtn.style.borderTopColor = '#6ed138';
+                bpBtn.style.borderLeftColor = '#6ed138';
+                bpBtn.style.borderRightColor = '#1a380d';
+                bpBtn.style.borderBottomColor = '#1a380d';
+                rpBtn.style.backgroundColor = '#444';
+                rpBtn.style.borderTopColor = '#777';
+                rpBtn.style.borderLeftColor = '#777';
+                rpBtn.style.borderRightColor = '#111';
+                rpBtn.style.borderBottomColor = '#111';
+            }
+        }
+
+        function handleRpIconUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const base64 = e.target.result;
+                    const preview = document.getElementById('rpIconPreview');
+                    preview.style.backgroundImage = `url(${base64})`;
+                    preview.innerText = '';
+                    const proj = getCurrentProject();
+                    if (!proj.rp) proj.rp = { name: proj.name + " - RP", desc: "", image: "" };
+                    proj.rp.image = base64;
+                    saveProjects();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function handleBpIconUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const base64 = e.target.result;
+                    const preview = document.getElementById('bpIconPreview');
+                    preview.style.backgroundImage = `url(${base64})`;
+                    preview.innerText = '';
+                    const proj = getCurrentProject();
+                    if (!proj.bp) proj.bp = { name: proj.name + " - BP", desc: "", image: "" };
+                    proj.bp.image = base64;
+                    saveProjects();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function openPackPanel() {
+            const proj = getCurrentProject();
+            if (!proj.rp) proj.rp = { name: proj.name + " - RP", desc: proj.desc || "", image: proj.image || "" };
+            if (!proj.bp) proj.bp = { name: proj.name + " - BP", desc: proj.desc || "", image: proj.image || "" };
+
+            document.getElementById('rpNameInput').value = proj.rp.name;
+            document.getElementById('rpDescInput').value = proj.rp.desc;
+            const rpPrev = document.getElementById('rpIconPreview');
+            if (proj.rp.image) {
+                rpPrev.style.backgroundImage = `url(${proj.rp.image})`;
+                rpPrev.innerText = '';
+            } else {
+                rpPrev.style.backgroundImage = '';
+                rpPrev.innerText = '📦';
+            }
+
+            document.getElementById('bpNameInput').value = proj.bp.name;
+            document.getElementById('bpDescInput').value = proj.bp.desc;
+            const bpPrev = document.getElementById('bpIconPreview');
+            if (proj.bp.image) {
+                bpPrev.style.backgroundImage = `url(${proj.bp.image})`;
+                bpPrev.innerText = '';
+            } else {
+                bpPrev.style.backgroundImage = '';
+                bpPrev.innerText = '📦';
+            }
+
+            switchPackTab('rp');
+            openPanel('packPanel');
+        }
+
+        function downloadAddon() {
+            const proj = getCurrentProject();
+            
+            if (!proj.rp) proj.rp = {};
+            proj.rp.name = document.getElementById('rpNameInput').value || (proj.name + " - RP");
+            proj.rp.desc = document.getElementById('rpDescInput').value || 'Resource Pack generated by StarCat';
+
+            if (!proj.bp) proj.bp = {};
+            proj.bp.name = document.getElementById('bpNameInput').value || (proj.name + " - BP");
+            proj.bp.desc = document.getElementById('bpDescInput').value || 'Behavior Pack generated by StarCat';
+            
+            saveProjects();
+
+            const addonPayload = {
+                addon_name: proj.name,
+                resource_pack: proj.rp,
+                behavior_pack: proj.bp,
+                components: proj.items
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(addonPayload, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", proj.name.toLowerCase().replace(/\s+/g, '_') + ".mcaddon");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+
+            alert('Download do Add-on (Teste) iniciado!');
+        }
+
+        function renderProjectsList() {
+            hideNewProjectInput();
+            const container = document.getElementById('projectsListContainer');
+            let html = '';
+
+            projects.forEach(proj => {
+                const isActive = proj.id === activeProjectId;
+                const badgeStyle = proj.image ? `background-image: url(${proj.image});` : '';
+                const badgeContent = proj.image ? '' : '📦';
+
+                html += `
+                    <div class="project-card ${isActive ? 'active-proj' : ''}" onclick="switchProject('${proj.id}')">
+                        <div class="project-card-left">
+                            <div class="project-color-badge" style="${badgeStyle}">${badgeContent}</div>
+                            <div class="project-info">
+                                <span class="project-title">${isActive ? '▶ ' : ''} ${proj.name}</span>
+                                <span class="project-details">${proj.items.length} componente(s) cadastrado(s)</span>
+                            </div>
+                        </div>
+                        <button class="btn-delete" style="width: auto; padding: 6px 12px; margin:0;" onclick="event.stopPropagation(); deleteProject('${proj.id}')">Excluir</button>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function createNewProject() {
+            const nameInput = document.getElementById('newProjectName');
+            const name = nameInput.value.trim() || ('Addon ' + (projects.length + 1));
+            
+            const newProj = {
+                id: 'proj_' + Date.now(),
+                name: name,
+                desc: '',
+                image: uploadedProjectImage,
+                items: [],
+                rp: { name: name + " - RP", desc: "", image: uploadedProjectImage },
+                bp: { name: name + " - BP", desc: "", image: uploadedProjectImage }
+            };
+
+            projects.push(newProj);
+            activeProjectId = newProj.id;
+            saveProjects();
+            hideNewProjectInput();
+            renderProjectsList();
+            updateHeaderLabel();
+        }
+
+        function switchProject(id) {
+            activeProjectId = id;
+            saveProjects();
+            goHome();
+        }
+
+        function deleteProject(id) {
+            if (projects.length <= 1) {
+                alert("Você não pode excluir o único projeto restante!");
+                return;
+            }
+            if(confirm("Deseja realmente excluir este projeto?")) {
+                projects = projects.filter(p => p.id !== id);
+                if(activeProjectId === id && projects.length > 0) {
+                    activeProjectId = projects[0].id;
+                }
+                saveProjects();
+                renderProjectsList();
+                updateHeaderLabel();
+            }
+        }
+
+        function renderHomeGrid() {
+            const proj = getCurrentProject();
+            const grid = document.getElementById('homeGrid');
+            let html = '';
+
+            html += `
+                <button class="mc-btn-square mc-btn-add" onclick="openPanel('creatorSelector')">
+                    <svg class="mc-icon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Novo
+                </button>
+            `;
+
+            const icons = {
+                'Bloco': '<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>',
+                'Item': '<path d="M14.5 3.5L20.5 9.5L9 21H3V15L14.5 3.5Z"/>',
+                'Mob': '<rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="9" cy="10" r="1.5" fill="#fff"/><circle cx="15" cy="10" r="1.5" fill="#fff"/><path d="M9 15h6"/>',
+                'Script JS': '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>'
+            };
+
+            proj.items.forEach((item, index) => {
+                html += `
+                    <button class="mc-btn-square" onclick="editItem(${index})">
+                        <svg class="mc-icon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+                            ${icons[item.type] || icons['Bloco']}
+                        </svg>
+                        <span>${item.name}</span>
+                        <span class="btn-subtitle">[${item.type}]</span>
+                    </button>
+                `;
+            });
+
+            grid.innerHTML = html;
+        }
+
+        function resetForm(type) {
+            currentEditingIndex = null;
+            if(type === 'block') {
+                document.getElementById('blockEditIndex').value = "";
+                document.getElementById('blockPanelTitle').innerText = "Criar Bloco";
+                document.getElementById('blockDeleteBtn').style.display = "none";
+                document.getElementById('blockId').value = "starcat:bloco_custom";
+                document.getElementById('blockHardness').value = "3.0";
+                document.getElementById('blockTexture').value = "custom_block";
+                document.getElementById('blockOutput').innerText = "// Preencha e clique em salvar...";
+            } else if(type === 'item') {
+                document.getElementById('itemEditIndex').value = "";
+                document.getElementById('itemPanelTitle').innerText = "Criar Item";
+                document.getElementById('itemDeleteBtn').style.display = "none";
+                document.getElementById('itemId').value = "starcat:espada_rubi";
+                document.getElementById('itemName').value = "Espada de Rubi";
+                document.getElementById('itemOutput').innerText = "// Preencha e clique em salvar...";
+            } else if(type === 'mob') {
+                document.getElementById('mobEditIndex').value = "";
+                document.getElementById('mobPanelTitle').innerText = "Criar Mob";
+                document.getElementById('mobDeleteBtn').style.display = "none";
+                document.getElementById('mobId').value = "starcat:boss_guard";
+                document.getElementById('mobHealth').value = "100";
+                document.getElementById('mobSpeed').value = "0.3";
+                document.getElementById('mobOutput').innerText = "// Preencha e clique em salvar...";
+            } else if(type === 'script') {
+                document.getElementById('scriptEditIndex').value = "";
+                document.getElementById('scriptPanelTitle').innerText = "Criar Script JS";
+                document.getElementById('scriptDeleteBtn').style.display = "none";
+                document.getElementById('scriptOutput').innerText = "// Selecione e clique em salvar...";
+            }
+        }
+
+        function saveAndGenerateBlock() {
+            const editIndex = document.getElementById('blockEditIndex').value;
+            const id = document.getElementById('blockId').value;
+            const hardness = document.getElementById('blockHardness').value;
+            const texture = document.getElementById('blockTexture').value;
+
+            const json = {
+                "format_version": "1.20.0",
+                "minecraft:block": {
+                    "description": {
+                        "identifier": id,
+                        "menu_category": { "category": "construction", "group": "itemGroup.name.construction" }
+                    },
+                    "components": {
+                        "minecraft:loot": "loot_tables/blocks/custom_block.json",
+                        "minecraft:destruction_time": parseFloat(hardness),
+                        "minecraft:geometry": "geometry.block",
+                        "minecraft:material_instances": {
+                            "*": { "texture": texture, "render_method": "opaque" }
+                        }
+                    }
+                }
+            };
+            
+            const jsonString = JSON.stringify(json, null, 2);
+            document.getElementById('blockOutput').innerText = jsonString;
+
+            const itemData = { type: 'Bloco', name: id, content: jsonString, raw: { id, hardness, texture } };
+            const proj = getCurrentProject();
+            if(editIndex !== "") {
+                proj.items[editIndex] = itemData;
+            } else {
+                proj.items.push(itemData);
+            }
+            saveProjects();
+            alert('Bloco salvo no projeto!');
+            goHome();
+        }
+
+        function saveAndGenerateItem() {
+            const editIndex = document.getElementById('itemEditIndex').value;
+            const id = document.getElementById('itemId').value;
+            const name = document.getElementById('itemName').value;
+            const category = document.getElementById('itemCategory').value;
+
+            const json = {
+                "format_version": "1.20.0",
+                "minecraft:item": {
+                    "description": { "identifier": id },
+                    "components": {
+                        "minecraft:display_name": { "value": name },
+                        "minecraft:icon": { "texture": id.split(':')[1] },
+                        "minecraft:creative_category": { "parent": "itemGroup.name." + category }
+                    }
+                }
+            };
+
+            const jsonString = JSON.stringify(json, null, 2);
+            document.getElementById('itemOutput').innerText = jsonString;
+
+            const itemData = { type: 'Item', name: id, content: jsonString, raw: { id, name, category } };
+            const proj = getCurrentProject();
+            if(editIndex !== "") {
+                proj.items[editIndex] = itemData;
+            } else {
+                proj.items.push(itemData);
+            }
+            saveProjects();
+            alert('Item salvo no projeto!');
+            goHome();
+        }
+
+        function saveAndGenerateMob() {
+            const editIndex = document.getElementById('mobEditIndex').value;
+            const id = document.getElementById('mobId').value;
+            const health = document.getElementById('mobHealth').value;
+            const speed = document.getElementById('mobSpeed').value;
+
+            const json = {
+                "format_version": "1.20.0",
+                "minecraft:entity": {
+                    "description": {
+                        "identifier": id,
+                        "is_spawnable": true,
+                        "is_summonable": true
+                    },
+                    "components": {
+                        "minecraft:health": { "value": parseInt(health), "max": parseInt(health) },
+                        "minecraft:movement": { "value": parseFloat(speed) },
+                        "minecraft:nameable": {}
+                    }
+                }
+            };
+
+            const jsonString = JSON.stringify(json, null, 2);
+            document.getElementById('mobOutput').innerText = jsonString;
+
+            const itemData = { type: 'Mob', name: id, content: jsonString, raw: { id, health, speed } };
+            const proj = getCurrentProject();
+            if(editIndex !== "") {
+                proj.items[editIndex] = itemData;
+            } else {
+                proj.items.push(itemData);
+            }
+            saveProjects();
+            alert('Mob salvo no projeto!');
+            goHome();
+        }
+
+        function saveAndGenerateScript() {
+            const editIndex = document.getElementById('scriptEditIndex').value;
+            const type = document.getElementById('scriptType').value;
+            let code = "";
+
+            if (type === 'chat') {
+                code = `import { world } from "@minecraft/server";\n\nworld.beforeEvents.chatSend.subscribe((event) => {\n    const { sender, message } = event;\n    if (message === "!menu") {\n        event.cancel = true;\n        sender.sendMessage("§a[StarCat] Abrindo menu dinâmico...");\n    }\n});`;
+            } else if (type === 'playerJoin') {
+                code = `import { world } from "@minecraft/server";\n\nworld.afterEvents.playerSpawn.subscribe((event) => {\n    if (event.initialSpawn) {\n        const player = event.player;\n        player.sendMessage("§bBem-vindo ao servidor, " + player.name + "!");\n    }\n});`;
+            } else if (type === 'itemUse') {
+                code = `import { world } from "@minecraft/server";\n\nworld.afterEvents.itemUse.subscribe((event) => {\n    const { source, itemStack } = event;\n    if (itemStack.typeId === "starcat:espada_rubi") {\n        source.sendMessage("§eVocê ativou a habilidade especial da espada!");\n    }\n});`;
+            }
+
+            document.getElementById('scriptOutput').innerText = code;
+
+            const itemData = { type: 'Script JS', name: 'Evento: ' + type, content: code, raw: { type } };
+            const proj = getCurrentProject();
+            if(editIndex !== "") {
+                proj.items[editIndex] = itemData;
+            } else {
+                proj.items.push(itemData);
+            }
+            saveProjects();
+            alert('Script salvo no projeto!');
+            goHome();
+        }
+
+        function editItem(index) {
+            currentEditingIndex = index;
+            const proj = getCurrentProject();
+            const item = proj.items[index];
+
+            if (item.type === 'Bloco') {
+                openPanel('blocks');
+                document.getElementById('blockEditIndex').value = index;
+                document.getElementById('blockPanelTitle').innerText = "Editar Bloco";
+                document.getElementById('blockDeleteBtn').style.display = "block";
+                document.getElementById('blockId').value = item.raw.id;
+                document.getElementById('blockHardness').value = item.raw.hardness;
+                document.getElementById('blockTexture').value = item.raw.texture;
+                document.getElementById('blockOutput').innerText = item.content;
+            } else if (item.type === 'Item') {
+                openPanel('items');
+                document.getElementById('itemEditIndex').value = index;
+                document.getElementById('itemPanelTitle').innerText = "Editar Item";
+                document.getElementById('itemDeleteBtn').style.display = "block";
+                document.getElementById('itemId').value = item.raw.id;
+                document.getElementById('itemName').value = item.raw.name;
+                document.getElementById('itemCategory').value = item.raw.category;
+                document.getElementById('itemOutput').innerText = item.content;
+            } else if (item.type === 'Mob') {
+                openPanel('mobs');
+                document.getElementById('mobEditIndex').value = index;
+                document.getElementById('mobPanelTitle').innerText = "Editar Mob";
+                document.getElementById('mobDeleteBtn').style.display = "block";
+                document.getElementById('mobId').value = item.raw.id;
+                document.getElementById('mobHealth').value = item.raw.health;
+                document.getElementById('mobSpeed').value = item.raw.speed;
+                document.getElementById('mobOutput').innerText = item.content;
+            } else if (item.type === 'Script JS') {
+                openPanel('scripts');
+                document.getElementById('scriptEditIndex').value = index;
+                document.getElementById('scriptPanelTitle').innerText = "Editar Script JS";
+                document.getElementById('scriptDeleteBtn').style.display = "block";
+                document.getElementById('scriptType').value = item.raw.type;
+                document.getElementById('scriptOutput').innerText = item.content;
+            }
+        }
+
+        function deleteCurrentItem() {
+            if (currentEditingIndex !== null && confirm("Deseja realmente excluir este componente?")) {
+                const proj = getCurrentProject();
+                proj.items.splice(currentEditingIndex, 1);
+                saveProjects();
+                goHome();
+            }
+        }
+
+        function copyText(elementId) {
+            const text = document.getElementById(elementId).innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                alert("Código copiado para a área de transferência!");
+            });
+        }
+
+        updateHeaderLabel();
+        renderHomeGrid();
+    </script>
 </body>
 </html>
+
+
