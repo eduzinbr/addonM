@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criar Script - StarCat Add-on Creator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h2>📜 Criar Script (@minecraft/server)</h2>
+        <div class="card">
+            <div id="status" class="status">Script salvo com sucesso!</div>
+            <form id="script-form">
+                <label>Título do Script</label>
+                <input type="text" id="title" placeholder="ex: Mensagem de Boas-Vindas" required>
+
+                <label>Código JavaScript (API @minecraft/server)</label>
+                <textarea id="code" rows="8" placeholder="world.sendMessage('Olá mundo!');">system.runInterval(() => {
+    // Exemplo de loop a cada tick
+}, 20);</textarea>
+
+                <button type="submit">Salvar Script</button>
+            </form>
+        </div>
+        <a href="index.html" class="back-link">← Voltar ao Início</a>
+    </div>
+    <script src="builder.js"></script>
+    <script>
+        document.getElementById('script-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const data = {
+                title: document.getElementById('title').value,
+                code: document.getElementById('code').value
+            };
+            saveToStorage('script', data);
+            let st = document.getElementById('status');
+            st.style.display = 'block';
+            setTimeout(() => st.style.display = 'none', 3000);
+            document.getElementById('title').value = '';
+            updateCounts();
+        });
+    </script>
+</body>
+</html>

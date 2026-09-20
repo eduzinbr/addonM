@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StarCat Add-on Creator - Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- JSZip via CDN for client-side .mcaddon packaging -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>StarCat Add-on Creator</h1>
+        <div class="card" style="text-align: center;">
+            <p style="color: var(--text-muted); margin-bottom: 15px;">Crie Blocos, Itens, Scripts e Mobs para Minecraft Bedrock e baixe seu .mcaddon pronto!</p>
+        </div>
+
+        <div class="nav-grid">
+            <div class="card" style="margin-bottom: 0; text-align: center; cursor: pointer;" onclick="location.href='bloco.html'">
+                <h3>🧱 Bloco</h3>
+                <p style="color: var(--text-muted); font-size: 14px; margin-top: 5px;">Criados: <span id="count-bloco">0</span></p>
+            </div>
+            <div class="card" style="margin-bottom: 0; text-align: center; cursor: pointer;" onclick="location.href='item.html'">
+                <h3>⚔️ Item</h3>
+                <p style="color: var(--text-muted); font-size: 14px; margin-top: 5px;">Criados: <span id="count-item">0</span></p>
+            </div>
+            <div class="card" style="margin-bottom: 0; text-align: center; cursor: pointer;" onclick="location.href='script.html'">
+                <h3>📜 Script</h3>
+                <p style="color: var(--text-muted); font-size: 14px; margin-top: 5px;">Criados: <span id="count-script">0</span></p>
+            </div>
+            <div class="card" style="margin-bottom: 0; text-align: center; cursor: pointer;" onclick="location.href='mob.html'">
+                <h3>🧟 Mob</h3>
+                <p style="color: var(--text-muted); font-size: 14px; margin-top: 5px;">Criados: <span id="count-mob">0</span></p>
+            </div>
+        </div>
+
+        <div class="card">
+            <button class="btn-success" onclick="exportMcAddon()">📦 Baixar Add-on (.mcaddon)</button>
+            <button class="btn-secondary" onclick="limparDados()" style="margin-bottom: 0;">🗑️ Limpar Todos os Dados</button>
+        </div>
+    </div>
+    <script src="builder.js"></script>
+</body>
+</html>

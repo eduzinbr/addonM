@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criar Item - StarCat Add-on Creator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h2>⚔️ Criar Novo Item</h2>
+        <div class="card">
+            <div id="status" class="status">Item salvo com sucesso!</div>
+            <form id="item-form">
+                <label>Namespace (ex: starcat)</label>
+                <input type="text" id="namespace" value="starcat" required>
+
+                <label>Nome do Item (sem espaços, ex: espada_luz)</label>
+                <input type="text" id="name" placeholder="ex: espada_fogo" required>
+
+                <label>Stack Máximo</label>
+                <input type="number" id="stack" value="64">
+
+                <button type="submit">Salvar Item</button>
+            </form>
+        </div>
+        <a href="index.html" class="back-link">← Voltar ao Início</a>
+    </div>
+    <script src="builder.js"></script>
+    <script>
+        document.getElementById('item-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const data = {
+                namespace: document.getElementById('namespace').value,
+                name: document.getElementById('name').value,
+                stack: document.getElementById('stack').value
+            };
+            saveToStorage('item', data);
+            let st = document.getElementById('status');
+            st.style.display = 'block';
+            setTimeout(() => st.style.display = 'none', 3000);
+            document.getElementById('name').value = '';
+            updateCounts();
+        });
+    </script>
+</body>
+</html>
