@@ -393,7 +393,7 @@
   <div id="homeScreen">
     <div class="home-header">
       <h1>VR Horizon OS</h1>
-      <p>Aproxime o dedo indicador ou faça o gesto de pinça 👆 para abrir</p>
+      <p>Aponte o dedo indicador 👆 e faça pinça para interagir</p>
     </div>
 
     <div class="app-grid">
@@ -586,15 +586,20 @@
     let pinchCooldown = false;
     let lastGesture = "";
 
+    // Variáveis para suavização (Lerp) do cursor no dedo indicador
+    let cursorX = window.innerWidth / 2;
+    let cursorY = window.innerHeight / 2;
+    const lerpFactor = 0.4; // Velocidade de suavização do cursor
+
     const hands = new Hands({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
     });
 
     hands.setOptions({
       maxNumHands: 1,
-      modelComplexity: 0,
-      minDetectionConfidence: 0.6,
-      minTrackingConfidence: 0.6
+      modelComplexity: 1,
+      minDetectionConfidence: 0.65,
+      minTrackingConfidence: 0.65
     });
 
     hands.onResults(onResults);
@@ -609,13 +614,18 @@
         };
         vrStatus.innerText = "🖐️ Sistema de Mãos Pronto";
       } catch (e) {
-        vrStatus.innerText = "Erro na câmera!";
+        vrStatus.innerText = "Erro ao acessar a câmera!";
       }
     }
 
+    // Loop blindado com try-catch para impedir travamentos (bugs no YouTube/modais)
     async function loopCamera() {
       if (!videoElement.paused && !videoElement.ended) {
-        await hands.send({ image: videoElement });
+        try {
+          await hands.send({ image: videoElement });
+        } catch (err) {
+          console.warn("Erro no frame do MediaPipe (ignorado para evitar travamento):", err);
+        }
         requestAnimationFrame(loopCamera);
       }
     }
@@ -630,42 +640,51 @@
       if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
         for (const landmarks of results.multiHandLandmarks) {
           
-          // Desenhar o Esqueleto por cima de TUDO
-          drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, { color: '#00ffcc', lineWidth: 4 });
-          drawLandmarks(canvasCtx, landmarks, { color: '#ff0055', lineWidth: 2, radius: 5 });
+          // Desenhar o Esqueleto da mão
+          drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, { color: '#00ffcc', lineWidth: 3 });
+          drawLandmarks(canvasCtx, landmarks, { color: '#ff0055', lineWidth: 1, radius: 4 });
 
+          // Ponta do dedo indicador (Landmark 8) e polegar (Landmark 4)
           const indexTip = landmarks[8];
           const thumbTip = landmarks[4];
 
-          const screenX = (1 - indexTip.x) * canvasElement.width;
-          const screenY = indexTip.y * canvasElement.height;
+          // Coordenadas alvo na tela (espelhadas)
+          const targetX = (1 - indexTip.x) * canvasElement.width;
+          const targetY = indexTip.y * canvasElement.height;
 
-          // Desenhar cursor VR
+          // Aplicação de Lerp (suavização) para o cursor ficar sempre firme no indicador sem tremer
+          cursorX += (targetX - cursorX) * lerpFactor;
+          cursorY += (targetY - cursorY) * lerpFactor;
+
+          // Gesto de Pinça (Distância entre Indicador e Polegar)
+          const distancePinch = Math.hypot((indexTip.x - thumbTip.x), (indexTip.y - thumbTip.y));
+          const isPinching = distancePinch < 0.05;
+          const isFist = checkFistGesture(landmarks);
+
+          // Desenhar cursor VR no dedo indicador
           canvasCtx.beginPath();
-          canvasCtx.arc(screenX, screenY, 12, 0, 2 * Math.PI);
-          canvasCtx.fillStyle = '#ff0055';
+          canvasCtx.arc(cursorX, cursorY, isPinching ? 16 : 12, 0, 2 * Math.PI);
+          canvasCtx.fillStyle = isPinching ? '#00ffcc' : '#ff0055';
           canvasCtx.fill();
           canvasCtx.strokeStyle = '#ffffff';
           canvasCtx.lineWidth = 3;
           canvasCtx.stroke();
 
-          // Gesto de Pinça ou Toque
-          const distancePinch = Math.hypot((indexTip.x - thumbTip.x), (indexTip.y - thumbTip.y));
-          const isFist = checkFistGesture(landmarks);
-
+          // Ações baseadas em gestos
           if (isFist) {
             if (lastGesture !== "fist") {
               lastGesture = "fist";
               if (player && isPlaying) {
                 player.pauseVideo();
-                vrStatus.innerText = "✊ Punho: Pausando";
+                vrStatus.innerText = "✊ Punho: Pausando vídeo";
               }
             }
-          } else if (distancePinch < 0.05) {
+          } else if (isPinching) {
             if (!pinchCooldown) {
               pinchCooldown = true;
-              simularClique(screenX, screenY);
-              setTimeout(() => { pinchCooldown = false; }, 600);
+              simularClique(cursorX, cursorY);
+              vrStatus.innerText = "🎯 Clique com Pinça!";
+              setTimeout(() => { pinchCooldown = false; }, 500);
             }
           } else {
             if (lastGesture === "fist") {
@@ -689,7 +708,7 @@
 
       tips.forEach(tip => {
         const dist = Math.hypot(landmarks[tip].x - wrist.x, landmarks[tip].y - wrist.y);
-        if (dist < 0.25) closedFingers++;
+        if (dist < 0.23) closedFingers++;
       });
 
       return closedFingers >= 3;
