@@ -55,9 +55,11 @@
             padding: 8px; 
             border-radius: 8px;
             display: flex; 
+            flex-wrap: wrap;
             gap: 6px; 
             font-family: Arial, sans-serif;
             box-shadow: 0 4px 10px rgba(0,0,0,0.7);
+            max-width: 250px;
         }
         #painelTeste button {
             background: #fe2c55; color: white; border: none; padding: 6px 10px;
@@ -67,7 +69,7 @@
 
         #btnCamera {
             position: fixed; 
-            top: 55px; 
+            top: 95px; 
             left: 10px; 
             z-index: 999999;
             background: rgba(0, 0, 0, 0.85); 
@@ -151,6 +153,54 @@
         .info-icone { width: 30px; height: 30px; image-rendering: pixelated; }
         .info-seta { font-size: 14px; color: #ffeb3b; font-weight: bold; text-shadow: 1px 1px #000; }
 
+        /* ============ BANNER DE SEGUIDOR (MEIO DA TELA) ============ */
+        #followBanner {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999999;
+            background: rgba(0, 0, 0, 0.92);
+            border: 3px solid #ffd700;
+            border-radius: 16px;
+            padding: 20px 35px;
+            text-align: center;
+            box-shadow: 0 0 35px rgba(255, 215, 0, 0.7);
+            animation: popIn 0.4s ease-out;
+            font-family: Arial, sans-serif;
+            color: white;
+            pointer-events: none;
+        }
+        #followBanner img {
+            width: 75px;
+            height: 75px;
+            border-radius: 50%;
+            border: 3px solid #ffd700;
+            object-fit: cover;
+            margin-bottom: 10px;
+            box-shadow: 0 0 12px #ffd700;
+        }
+        #followBanner .titulo-follow {
+            font-size: 14px;
+            color: #ffeb3b;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        #followBanner .nome-follow {
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 4px;
+            text-shadow: 2px 2px #000;
+        }
+
+        @keyframes popIn {
+            0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+            70% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
         /* ============ TERRENO E JOGO ============ */
         .terrain-container {
             position: absolute; top: 80px; left: 0; width: 100%;
@@ -222,9 +272,11 @@
 
     <div id="hud">⛏️ Picaretas ativas: 0</div>
     <div id="painelTeste">
-        <button id="btnTesteLike">❤️ Simular Curtida</button>
-        <button id="btnTesteFollow">➕ Simular Follow</button>
-        <button id="btnTestePresente">🎁 Simular Presente</button>
+        <button id="btnTesteLike">❤️ Like</button>
+        <button id="btnTesteFollow">➕ Follow</button>
+        <button id="btnTestePresente">🎁 Presente</button>
+        <button id="btnTesteEu">💬 .eu</button>
+        <button id="btnTesteConsertar">🔧 .🔧</button>
     </div>
     <button id="btnCamera" title="Alternar entre câmera automática e manual">🎥 Câmera: Auto</button>
     <button id="btnReset" title="Zerar ranking, sumir picaretas e voltar ao topo">🔄</button>
@@ -232,6 +284,13 @@
     <div id="painelRank">
         <h4>🏆 TOP MINERADORES</h4>
         <div id="rankConteudo"></div>
+    </div>
+
+    <!-- BANNER DE SEGUIDOR NO MEIO DA TELA -->
+    <div id="followBanner">
+        <img id="followBannerAvatar" src="">
+        <div class="titulo-follow">Novo Seguidor!</div>
+        <div id="followBannerNome" class="nome-follow"></div>
     </div>
 
     <!-- PAINEL COMO JOGAR -->
@@ -467,7 +526,9 @@
                 nome: jogador.nome,
                 avatar: jogador.avatar,
                 tier: jogador.tier,
-                recursos: jogador.recursos
+                recursos: jogador.recursos,
+                durabilidade: jogador.durabilidade,
+                maxDurabilidade: jogador.maxDurabilidade
             });
         }
 
@@ -485,6 +546,8 @@
 
         function creditarQuebra(jogador, tipoBloco) {
             jogador.durabilidade--;
+            salvarNoFirebase(jogador);
+
             if (jogador.durabilidade <= 0) {
                 somQuebrarPicareta();
                 removerJogador(jogador);
@@ -618,13 +681,20 @@
             const firebaseKey = getFirebaseKey(nome);
             let tierInicial = tierPadrao;
             let recursosIniciais = { cobre: 0, ferro: 0, diamante: 0, esmeralda: 0 };
+            let durabilidadeInicial = null;
 
             if (globalRanking && globalRanking[firebaseKey]) {
                 tierInicial = globalRanking[firebaseKey].tier || tierPadrao;
                 if (globalRanking[firebaseKey].recursos) {
                     recursosIniciais = { ...globalRanking[firebaseKey].recursos };
                 }
+                if (globalRanking[firebaseKey].durabilidade !== undefined) {
+                    durabilidadeInicial = globalRanking[firebaseKey].durabilidade;
+                }
             }
+
+            const maxD = DURABILIDADE_MAX[tierInicial];
+            const durabilidadeFinal = (durabilidadeInicial !== null && durabilidadeInicial > 0) ? durabilidadeInicial : maxD;
 
             const elemento = document.createElement('div');
             elemento.className = 'pickaxe';
@@ -634,10 +704,9 @@
             label.className = 'pickaxe-label';
             document.body.appendChild(label);
 
-            const maxD = DURABILIDADE_MAX[tierInicial];
             const jogador = {
                 nome, avatar, tier: tierInicial,
-                durabilidade: maxD, maxDurabilidade: maxD,
+                durabilidade: durabilidadeFinal, maxDurabilidade: maxD,
                 recursos: recursosIniciais,
                 progresso: 0, presentesDiamante: 0,
                 element: elemento, label: label,
@@ -669,6 +738,34 @@
             db.ref('ativas/' + getFirebaseKey(jogador.nome)).remove();
         }
 
+        // ============ FILA DE BANNER DE SEGUIDORES ============
+        const followQueue = [];
+        let showingFollow = false;
+
+        function mostrarBannerFollow(nome, avatar) {
+            followQueue.push({ nome, avatar });
+            processarFilaFollow();
+        }
+
+        function processarFilaFollow() {
+            if (showingFollow || followQueue.length === 0) return;
+            showingFollow = true;
+            const item = followQueue.shift();
+
+            const banner = document.getElementById('followBanner');
+            document.getElementById('followBannerAvatar').src = item.avatar;
+            document.getElementById('followBannerNome').textContent = item.nome;
+
+            banner.style.display = 'block';
+            somNascerFollow();
+
+            setTimeout(() => {
+                banner.style.display = 'none';
+                showingFollow = false;
+                processarFilaFollow();
+            }, 3500);
+        }
+
         // ============ EVENTOS FIREBASE ============
         db.ref('eventos/').on('child_added', (snapshot) => {
             const dados = snapshot.val();
@@ -676,13 +773,21 @@
             const avatar = dados.avatar || (AVATAR_PADRAO + encodeURIComponent(dados.nome));
 
             if (dados.tipo === 'like') {
-                criarJogador(dados.nome, avatar, 'madeira');
-                somLike();
+                const qtdLikes = dados.likeCount || 1;
+                const existente = picaretasPorNome.get(dados.nome);
+                if (existente) {
+                    existente.durabilidade = Math.min(existente.maxDurabilidade, existente.durabilidade + qtdLikes);
+                    salvarNoFirebase(existente);
+                    somLike();
+                } else {
+                    criarJogador(dados.nome, avatar, 'madeira');
+                    somLike();
+                }
             } else if (dados.tipo === 'follow') {
+                mostrarBannerFollow(dados.nome, avatar);
                 const existente = picaretasPorNome.get(dados.nome);
                 if (!existente) {
                     criarJogador(dados.nome, avatar, 'pedra');
-                    somNascerFollow();
                 } else if (indiceTier(existente.tier) < indiceTier('pedra')) {
                     evoluir(existente, 'pedra');
                 }
@@ -699,6 +804,24 @@
                     evoluir(existente, 'ferro');
                 }
                 somGift();
+            } else if (dados.tipo === 'chat') {
+                const msg = (dados.comentario || '').trim().toLowerCase();
+                if (msg.startsWith('.eu')) {
+                    const existente = picaretasPorNome.get(dados.nome);
+                    if (!existente) {
+                        criarJogador(dados.nome, avatar, 'madeira');
+                        somLike();
+                    } else {
+                        somLike();
+                    }
+                } else if (msg.includes('.🔧') || msg.includes('consertar') || msg.includes('.p')) {
+                    const existente = picaretasPorNome.get(dados.nome);
+                    if (existente) {
+                        existente.durabilidade = Math.min(existente.maxDurabilidade, existente.durabilidade + 2);
+                        salvarNoFirebase(existente);
+                        somLike();
+                    }
+                }
             }
         });
 
@@ -709,7 +832,7 @@
         }
         document.getElementById('btnTesteLike').addEventListener('click', () => {
             const nome = nomeAleatorioTeste();
-            db.ref('eventos/').push({ tipo: 'like', nome, avatar: `https://i.pravatar.cc/150?u=${nome}` });
+            db.ref('eventos/').push({ tipo: 'like', nome, avatar: `https://i.pravatar.cc/150?u=${nome}`, likeCount: 1 });
         });
         document.getElementById('btnTesteFollow').addEventListener('click', () => {
             const nome = nomeAleatorioTeste();
@@ -718,6 +841,14 @@
         document.getElementById('btnTestePresente').addEventListener('click', () => {
             const nome = nomeAleatorioTeste();
             db.ref('eventos/').push({ tipo: 'gift', nome, avatar: `https://i.pravatar.cc/150?u=${nome}` });
+        });
+        document.getElementById('btnTesteEu').addEventListener('click', () => {
+            const nome = nomesTeste[0];
+            db.ref('eventos/').push({ tipo: 'chat', nome, avatar: `https://i.pravatar.cc/150?u=${nome}`, comentario: '.eu' });
+        });
+        document.getElementById('btnTesteConsertar').addEventListener('click', () => {
+            const nome = picaretas.length > 0 ? picaretas[0].nome : nomesTeste[0];
+            db.ref('eventos/').push({ tipo: 'chat', nome, avatar: `https://i.pravatar.cc/150?u=${nome}`, comentario: '.🔧 pra consertar a durabilidade +2' });
         });
         
         // ============ BOTÃO RESET ============
@@ -922,3 +1053,4 @@
     </script>
 </body>
 </html>
+
